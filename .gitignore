@@ -16,3 +16,13 @@ __pycache__/
 target/
 *.log
 .DS_Store
+.idea/
+*.iml
+local.properties
+/android/.gradle/
+/android/app/debug
+/android/app/profile
+/android/app/release
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
