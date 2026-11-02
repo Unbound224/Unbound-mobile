@@ -23,6 +23,7 @@ class _UnboundAppState extends ConsumerState<UnboundApp> {
   @override
   Widget build(BuildContext context) => MaterialApp.router(
     title: 'Unbound (Testnet)',
+    debugShowCheckedModeBanner: false,
     theme: buildTheme(),
     routerConfig: _router,
   );
