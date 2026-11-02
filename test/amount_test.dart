@@ -9,7 +9,16 @@ void main() {
       expect(Amount.parse('0.1') + Amount.parse('0.2'), Amount.parse('0.3'));
     });
 
-    for (final bad in ['', '-1', '1e3', '1.12345678', 'abc', '1.', '.5', ' 1']) {
+    for (final bad in [
+      '',
+      '-1',
+      '1e3',
+      '1.12345678',
+      'abc',
+      '1.',
+      '.5',
+      ' 1',
+    ]) {
       test('rejects "$bad"', () {
         expect(() => Amount.parse(bad), throwsFormatException);
       });
@@ -25,9 +34,15 @@ void main() {
     });
 
     test('slippage floor matches the core/stellar formula', () {
-      expect(Amount.parse('72').applySlippageFloor(100).toString(), '71.2800000');
+      expect(
+        Amount.parse('72').applySlippageFloor(100).toString(),
+        '71.2800000',
+      );
       expect(Amount.parse('72').applySlippageFloor(0), Amount.parse('72'));
-      expect(() => Amount.parse('1').applySlippageFloor(10001), throwsRangeError);
+      expect(
+        () => Amount.parse('1').applySlippageFloor(10001),
+        throwsRangeError,
+      );
     });
 
     test('display trims zeros but keeps two decimals', () {

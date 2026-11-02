@@ -40,11 +40,17 @@ class CreditPosition {
 
 /// Classifies holdings against the issuer directory. "No issuer means no usable store credit."
 class CreditInventory {
-  static List<CreditPosition> classify(List<Holding> holdings, List<EligibleAsset> directory, DateTime now) {
+  static List<CreditPosition> classify(
+    List<Holding> holdings,
+    List<EligibleAsset> directory,
+    DateTime now,
+  ) {
     final byAsset = {for (final p in directory) p.asset: p};
     final out = <CreditPosition>[];
     for (final h in holdings) {
-      if (h.asset.issuer == null) continue; // native XLM is not a merchant credit
+      if (h.asset.issuer == null) {
+        continue; // native XLM is not a merchant credit
+      }
       if (h.balance.isZero) continue;
       final p = byAsset[h.asset];
       final CreditStatus s;

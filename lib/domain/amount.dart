@@ -19,7 +19,9 @@ class Amount implements Comparable<Amount> {
     final parts = text.split('.');
     final frac = (parts.length > 1 ? parts[1] : '').padRight(scale, '0');
     final v = BigInt.parse(parts[0]) * _unit + BigInt.parse(frac);
-    if (v > maxUnits) throw FormatException('amount exceeds ledger maximum', text);
+    if (v > maxUnits) {
+      throw FormatException('amount exceeds ledger maximum', text);
+    }
     return Amount._(v);
   }
 

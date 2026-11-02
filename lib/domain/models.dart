@@ -25,7 +25,9 @@ class AssetRef {
 
   factory AssetRef.fromJson(Map<String, Object?> j) {
     final issuer = j['issuer'];
-    if (issuer != null && issuer is! String) throw ContractException('bad issuer');
+    if (issuer != null && issuer is! String) {
+      throw ContractException('bad issuer');
+    }
     return AssetRef(_need<String>(j, 'code'), issuer as String?);
   }
 
@@ -70,19 +72,28 @@ class Quote {
       return Quote(
         quoteId: _need<String>(j, 'quoteId'),
         networkPassphrase: _need<String>(j, 'networkPassphrase'),
-        sourceAsset: AssetRef.fromJson(_need<Map<String, Object?>>(j, 'sourceAsset')),
-        targetAsset: AssetRef.fromJson(_need<Map<String, Object?>>(j, 'targetAsset')),
+        sourceAsset: AssetRef.fromJson(
+          _need<Map<String, Object?>>(j, 'sourceAsset'),
+        ),
+        targetAsset: AssetRef.fromJson(
+          _need<Map<String, Object?>>(j, 'targetAsset'),
+        ),
         sourceAmount: Amount.parse(_need<String>(j, 'sourceAmount')),
-        expectedDestination: Amount.parse(_need<String>(j, 'expectedDestinationAmount')),
+        expectedDestination: Amount.parse(
+          _need<String>(j, 'expectedDestinationAmount'),
+        ),
         minDestination: Amount.parse(_need<String>(j, 'minDestinationAmount')),
         slippageBps: _need<int>(j, 'slippageBps'),
         path: [
-          for (final p in _need<List<Object?>>(j, 'path')) AssetRef.fromJson(p! as Map<String, Object?>),
+          for (final p in _need<List<Object?>>(j, 'path'))
+            AssetRef.fromJson(p! as Map<String, Object?>),
         ],
         estimatedFeeStroops: _need<int>(j, 'estimatedFeeStroops'),
         issuedAt: DateTime.parse(_need<String>(j, 'issuedAt')),
         expiresAt: DateTime.parse(_need<String>(j, 'expiresAt')),
-        warnings: [for (final w in _need<List<Object?>>(j, 'warnings')) w! as String],
+        warnings: [
+          for (final w in _need<List<Object?>>(j, 'warnings')) w! as String,
+        ],
       );
     } on FormatException catch (e) {
       throw ContractException('malformed quote: ${e.message}');
@@ -139,7 +150,8 @@ enum IntentState {
     throw ContractException('unknown intent state "$s"');
   }
 
-  bool get isTerminal => this == confirmed || this == failed || this == cancelled;
+  bool get isTerminal =>
+      this == confirmed || this == failed || this == cancelled;
 }
 
 class IntentView {
@@ -207,7 +219,11 @@ enum RedemptionState {
     throw ContractException('unknown redemption state "$s"');
   }
 
-  bool get isTerminal => this == fulfilled || this == rejected || this == failed || this == cancelled;
+  bool get isTerminal =>
+      this == fulfilled ||
+      this == rejected ||
+      this == failed ||
+      this == cancelled;
 }
 
 class RedemptionView {
@@ -222,14 +238,14 @@ class RedemptionView {
   });
 
   factory RedemptionView.fromJson(Map<String, Object?> j) => RedemptionView(
-        id: _need<String>(j, 'id'),
-        state: RedemptionState.parse(_need<String>(j, 'state')),
-        asset: AssetRef.fromJson(_need<Map<String, Object?>>(j, 'asset')),
-        amount: Amount.parse(_need<String>(j, 'amount')),
-        returnTxHash: j['returnTxHash'] as String?,
-        unsignedXdr: j['unsignedXdr'] as String?,
-        refundDue: _need<bool>(j, 'refundDue'),
-      );
+    id: _need<String>(j, 'id'),
+    state: RedemptionState.parse(_need<String>(j, 'state')),
+    asset: AssetRef.fromJson(_need<Map<String, Object?>>(j, 'asset')),
+    amount: Amount.parse(_need<String>(j, 'amount')),
+    returnTxHash: j['returnTxHash'] as String?,
+    unsignedXdr: j['unsignedXdr'] as String?,
+    refundDue: _need<bool>(j, 'refundDue'),
+  );
 
   final String id;
   final RedemptionState state;
@@ -257,7 +273,10 @@ class EligibleAsset {
       throw ContractException('non-active asset in eligible list');
     }
     return EligibleAsset(
-      asset: AssetRef(_need<String>(j, 'assetCode'), _need<String>(j, 'issuer')),
+      asset: AssetRef(
+        _need<String>(j, 'assetCode'),
+        _need<String>(j, 'issuer'),
+      ),
       unitOfAccount: _need<String>(policy, 'unitOfAccount'),
       expiresAt: DateTime.parse(_need<String>(policy, 'expiresAt')),
       jurisdiction: _need<String>(policy, 'jurisdiction'),

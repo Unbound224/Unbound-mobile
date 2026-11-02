@@ -62,7 +62,11 @@ class ApprovalRefused implements Exception {
 }
 
 class ApprovedTransaction {
-  const ApprovedTransaction(this.unsignedXdr, this.networkPassphrase, this.expectedHash);
+  const ApprovedTransaction(
+    this.unsignedXdr,
+    this.networkPassphrase,
+    this.expectedHash,
+  );
   final String unsignedXdr;
   final String networkPassphrase;
   final String expectedHash;
@@ -82,13 +86,19 @@ class ApprovalGuard {
     required DateTime now,
   }) {
     final bad = <RefusalReason>[];
-    if (intent.state != IntentState.awaitingSignature) bad.add(RefusalReason.wrongState);
+    if (intent.state != IntentState.awaitingSignature) {
+      bad.add(RefusalReason.wrongState);
+    }
     if (intent.quoteId != quote.quoteId) bad.add(RefusalReason.quoteMismatch);
     final xdr = intent.unsignedXdr;
     final hash = intent.txHash;
-    if (xdr == null || xdr.isEmpty || hash == null || hash.isEmpty) bad.add(RefusalReason.missingPayload);
+    if (xdr == null || xdr.isEmpty || hash == null || hash.isEmpty) {
+      bad.add(RefusalReason.missingPayload);
+    }
     if (!now.isBefore(quote.expiresAt)) bad.add(RefusalReason.expired);
-    if (xdr == null || hash == null || xdr.isEmpty || hash.isEmpty) throw ApprovalRefused(bad);
+    if (xdr == null || hash == null || xdr.isEmpty || hash.isEmpty) {
+      throw ApprovalRefused(bad);
+    }
 
     final TxSummary s;
     try {
@@ -96,14 +106,27 @@ class ApprovalGuard {
     } on Object {
       throw ApprovalRefused([...bad, RefusalReason.inspectionFailed]);
     }
-    if (s.networkPassphrase != testnetPassphrase || s.networkPassphrase != quote.networkPassphrase) bad.add(RefusalReason.wrongNetwork);
+    if (s.networkPassphrase != testnetPassphrase ||
+        s.networkPassphrase != quote.networkPassphrase) {
+      bad.add(RefusalReason.wrongNetwork);
+    }
     if (s.operationCount != 1) bad.add(RefusalReason.notSingleOperation);
-    if (s.operationType != 'pathPaymentStrictSend') bad.add(RefusalReason.wrongOperation);
-    if (s.sendAsset != quote.sourceAsset || s.destAsset != quote.targetAsset) bad.add(RefusalReason.assetMismatch);
-    if (s.sendAmount != quote.sourceAmount) bad.add(RefusalReason.amountMismatch);
+    if (s.operationType != 'pathPaymentStrictSend') {
+      bad.add(RefusalReason.wrongOperation);
+    }
+    if (s.sendAsset != quote.sourceAsset || s.destAsset != quote.targetAsset) {
+      bad.add(RefusalReason.assetMismatch);
+    }
+    if (s.sendAmount != quote.sourceAmount) {
+      bad.add(RefusalReason.amountMismatch);
+    }
     if (s.destMin != quote.minDestination) bad.add(RefusalReason.floorMismatch);
-    if (s.path.length != quote.path.length || !_samePath(s.path, quote.path)) bad.add(RefusalReason.routeMismatch);
-    if (!ownAccounts.contains(s.destination)) bad.add(RefusalReason.foreignDestination);
+    if (s.path.length != quote.path.length || !_samePath(s.path, quote.path)) {
+      bad.add(RefusalReason.routeMismatch);
+    }
+    if (!ownAccounts.contains(s.destination)) {
+      bad.add(RefusalReason.foreignDestination);
+    }
     if (s.sourceAccount != signingAccount) bad.add(RefusalReason.wrongSource);
     if (s.hash != hash) bad.add(RefusalReason.hashMismatch);
     if (bad.isNotEmpty) throw ApprovalRefused(bad);

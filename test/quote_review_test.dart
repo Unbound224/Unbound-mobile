@@ -31,14 +31,40 @@ void main() {
   });
 
   test('refuses a floor looser than the displayed slippage', () {
-    expect(review({'minDestinationAmount': '60.0000000'}).issues, contains(ReviewIssue.floorBelowSlippage));
+    expect(
+      review({'minDestinationAmount': '60.0000000'}).issues,
+      contains(ReviewIssue.floorBelowSlippage),
+    );
   });
 
-  test('refuses nonsense floors, high slippage, wrong network and zero amounts', () {
-    expect(review({'minDestinationAmount': '73.0000000'}).issues, contains(ReviewIssue.floorAboveExpected));
-    expect(review({'slippageBps': 2000, 'minDestinationAmount': '57.6000000'}).issues, contains(ReviewIssue.slippageTooHigh));
-    expect(review({'networkPassphrase': 'Public Global Stellar Network ; September 2015'}).issues, contains(ReviewIssue.wrongNetwork));
-    expect(review({'sourceAmount': '0.0000000'}).issues, contains(ReviewIssue.zeroAmount));
-    expect(review({'targetAsset': {'code': 'SHOP', 'issuer': 'GSHOP'}}).issues, contains(ReviewIssue.sameAsset));
-  });
+  test(
+    'refuses nonsense floors, high slippage, wrong network and zero amounts',
+    () {
+      expect(
+        review({'minDestinationAmount': '73.0000000'}).issues,
+        contains(ReviewIssue.floorAboveExpected),
+      );
+      expect(
+        review({'slippageBps': 2000, 'minDestinationAmount': '57.6000000'})
+            .issues,
+        contains(ReviewIssue.slippageTooHigh),
+      );
+      expect(
+        review({
+          'networkPassphrase': 'Public Global Stellar Network ; September 2015',
+        }).issues,
+        contains(ReviewIssue.wrongNetwork),
+      );
+      expect(
+        review({'sourceAmount': '0.0000000'}).issues,
+        contains(ReviewIssue.zeroAmount),
+      );
+      expect(
+        review({
+          'targetAsset': {'code': 'SHOP', 'issuer': 'GSHOP'},
+        }).issues,
+        contains(ReviewIssue.sameAsset),
+      );
+    },
+  );
 }
