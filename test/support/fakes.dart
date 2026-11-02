@@ -132,18 +132,64 @@ class FakeCoreApi implements CoreApi {
 
   @override
   Future<List<EligibleAsset>> listAssets() async => [];
+  final List<String> redemptionKeys = [];
+  int returnCalls = 0;
+  List<Object> redemptionScript = [redemptionView(RedemptionState.fulfilled)];
+  Object? createRedemptionResult;
+  Object? returnResult;
+  int redemptionGets = 0;
+
   @override
   Future<RedemptionView> createRedemption({
     required AssetRef asset,
     required String amount,
     required String holder,
     required String idempotencyKey,
-  }) => throw UnimplementedError();
+  }) async {
+    redemptionKeys.add(idempotencyKey);
+    final r =
+        createRedemptionResult ??
+        redemptionView(RedemptionState.awaitingReturn);
+    if (r is Exception) {
+      throw r;
+    }
+    return r as RedemptionView;
+  }
+
   @override
-  Future<RedemptionView> getRedemption(String id) => throw UnimplementedError();
+  Future<RedemptionView> getRedemption(String id) async {
+    final i = redemptionGets < redemptionScript.length
+        ? redemptionGets
+        : redemptionScript.length - 1;
+    redemptionGets++;
+    final r = redemptionScript[i];
+    if (r is Exception) {
+      throw r;
+    }
+    return r as RedemptionView;
+  }
+
   @override
   Future<RedemptionView> submitRedemptionReturn({
     required String id,
     required String signedXdr,
-  }) => throw UnimplementedError();
+  }) async {
+    returnCalls++;
+    final r = returnResult ?? redemptionView(RedemptionState.returnSubmitted);
+    if (r is Exception) {
+      throw r;
+    }
+    return r as RedemptionView;
+  }
 }
+
+RedemptionView redemptionView(RedemptionState s, {bool refund = false}) =>
+    RedemptionView(
+      id: 'red_1',
+      state: s,
+      asset: const AssetRef('SHOP', 'GSHOP'),
+      amount: Amount.parse('30'),
+      returnTxHash: hash64,
+      unsignedXdr: s == RedemptionState.awaitingReturn ? 'XDR' : null,
+      refundDue: refund,
+    );
