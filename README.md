@@ -29,39 +29,35 @@ Start with:
 - `docs/ROADMAP.md` — milestone acceptance gates.
 
 ## Status (honest)
-This repo is currently a **pure Dart package** (`unbound_mobile`), not a runnable Flutter app. The Flutter SDK
-was downloaded in the build sandbox but could not be run (its first run needed a global git config change that
-was not permitted), so **nothing here has been compiled or run under Flutter, on a device or on an emulator.**
-All code is pure Dart (3.13) and is verified with `dart analyze` and `dart test` only.
+This is now a **Flutter 3.47 app** (Android + iOS scaffolding, Riverpod 3, go_router). Verified with `flutter analyze` and
+`flutter test` (119 tests including widget tests). **It has never been run on a device or emulator**, never built as an
+APK/IPA, and never connected to a running unbound-core or Testnet. The sandbox had no emulator.
 
 | Layer | State |
 |---|---|
-| `Amount` (exact 7-decimal integers, no doubles) | Implemented, tested |
-| Strict contract models (quote, intent, redemption, eligible asset; unknown states/versions/networks rejected) | Implemented, tested |
-| `QuoteReview`: re-derives the slippage floor, rejects expired/odd quotes, builds the disclosure text (issuers, floor, fee, slippage) | Implemented, tested |
-| `ApprovalGuard`: before signing, compares the DECODED transaction with the quote (assets, amount, floor, route, destination is own wallet, network, hash) | Implemented, tested using a test inspector |
-| `CreditInventory`: holdings without a verified, unexpired, authorized issuer program are shown as unusable | Implemented, tested |
-| Status text: nothing says complete/redeemed before the ledger/merchant confirmed | Implemented, tested |
-| `HttpCoreApi` against unbound-core `/v1` (bearer token + `Idempotency-Key` headers, error envelope, unknown-outcome errors) | Implemented; tested over real loopback HTTP against a local stub (not the real core) |
-| `ExchangeFlow` / `RedemptionFlow`: persisted idempotency keys, double-tap guard, no re-sign on unknown outcome, polling with backoff, stale/offline handling, resume | Implemented, tested with labeled fakes |
-| **Flutter app, screens, Riverpod, go_router, theming** | **Not built** |
-| **Secure key storage / on-device signing** (`WalletSigner` port) | **Not built.** Only a test fake exists |
-| **Stellar XDR decoder** (`TransactionInspector` port) | **Not built.** Without it the guard cannot run in production; do not ship signing until it exists |
-| **Durable `PendingStore`** | **Not built.** Only an in-memory store, so crash-resume is verified in tests but not on a device |
-| Wallet challenge/verify login against core | Not built (core endpoints exist) |
-| Balances (`BalanceSource` port) | Not built; no real implementation |
-| Device / integration tests, store listings | None. The app is not in any app store |
+| Pure rules: exact `Amount`, strict contract models, `QuoteReview` (re-derived slippage floor), `CreditInventory`, honest status text | Implemented, tested |
+| `ApprovalGuard` + **`StellarXdrInspector`** (stellar_flutter_sdk): decodes the unsigned envelope locally and compares it to the quote | Implemented; tested against **real XDR produced by unbound-stellar's builders** (`test/fixtures/transactions.v1.json`), including hash reproduction |
+| **`SecureWalletSigner`**: key in Android Keystore / iOS Keychain via `flutter_secure_storage`, approval before signing, Testnet only | Implemented; **Dart signing equals the TypeScript-signed fixture byte for byte** (tested with an in-memory store). Platform keystore itself unverified |
+| `LocalAuthApproval` (biometric / device credential, fails closed) | Written; **unverified on a device** |
+| Durable `FilePendingStore` (idempotency keys / in-flight ids, atomic writes) | Implemented, tested |
+| `HttpCoreApi`: quotes, intents, submit, redemptions, portfolio, targets, wallet challenge/verify | Implemented; tested over loopback HTTP against a stub (not the real core) |
+| `ExchangeFlow` / `RedemptionFlow` (persisted keys, double-tap guard, no re-sign on unknown outcome, snapshot + polling, stale/offline, resume) | Implemented, tested |
+| **Screens**: wallet gate + sign-in, inventory, exchange input, quote review (live countdown), status, redemption, settings/security (wipe wallet) | Implemented; widget-tested incl. full journeys with real fixture XDR, expiry, guard refusal, cancelled signing, unknown outcome, failure |
+| Accessibility | Large tap targets, labelled controls and tooltips; **no TalkBack/VoiceOver audit performed** |
+| Wallet backup / recovery, seed export, multiple wallets, localisation, push notifications | **Not built** |
+| Device / integration tests (`integration_test/`), store listings | **None.** Not in any app store |
 
 ## Quick start
 ```
-dart pub get
+flutter pub get
 dart format --output=none --set-exit-if-changed lib test
-dart analyze
-dart test
+flutter analyze
+flutter test
+flutter run --dart-define=API_URL=http://10.0.2.2:3001   # Android emulator -> host core (never done in the sandbox)
 ```
 
 ## Layout
-`lib/domain` (pure rules), `lib/flows` (orchestration + ports), `lib/integrations` (HTTP client), `test/` (incl. `test/support/fakes.dart`, test adapters only).
+`lib/domain` (pure rules), `lib/flows` (orchestration + ports), `lib/integrations` (HTTP, XDR, signer, stores), `lib/app` + `lib/features` (Riverpod + screens), `test/` (`test/support/fakes.dart` and `test/app/harness.dart` are test adapters only).
 
 ## Security notes
 No secrets in the repo. The app never sees or sends a secret key: the signer port returns only a signed envelope.
