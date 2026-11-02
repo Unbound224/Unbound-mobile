@@ -4,7 +4,6 @@ import 'package:unbound_mobile/domain/amount.dart';
 import 'package:unbound_mobile/domain/models.dart';
 import 'package:unbound_mobile/integrations/core_api.dart';
 
-import '../support/fakes.dart';
 import 'harness.dart';
 
 RedemptionView awaiting() => RedemptionView(
@@ -121,6 +120,10 @@ void main() {
       );
       await openRedeem(tester, r);
       expect(r.api.returnCalls, 0);
+      expect(
+        find.textContaining('did not match the redemption'),
+        findsOneWidget,
+      );
     },
   );
 
