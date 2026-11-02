@@ -23,6 +23,17 @@ class ApiException implements Exception {
 /// Port to unbound-core (/v1). The mobile app owns no business rules beyond presentation and signing.
 abstract class CoreApi {
   Future<List<EligibleAsset>> listAssets();
+
+  /// Assets a holder may receive in an exchange (admin-curated; not redeemable credit).
+  Future<List<AssetRef>> listTargets();
+  Future<WalletChallenge> walletChallenge(String publicKey);
+
+  /// Exchanges a signed challenge for a session token; the caller stores it in memory only.
+  Future<String> walletVerify({
+    required String challengeId,
+    required String signatureBase64,
+  });
+  Future<PortfolioView> portfolio();
   Future<Quote> requestQuote({
     required AssetRef source,
     required AssetRef target,
@@ -148,6 +159,58 @@ class HttpCoreApi implements CoreApi {
       return [for (final a in list) EligibleAsset.fromJson(a! as Json)];
     });
   }
+
+  @override
+  Future<List<AssetRef>> listTargets() async {
+    final j = await _send('GET', '/v1/targets');
+    return _parse(j, (m) {
+      final list = m['targets'];
+      if (list is! List<Object?>) {
+        throw ContractException('targets missing');
+      }
+      return [for (final t in list) AssetRef.fromJson(t! as Json)];
+    });
+  }
+
+  @override
+  Future<WalletChallenge> walletChallenge(String publicKey) async => _parse(
+    await _send(
+      'POST',
+      '/v1/wallets/challenge',
+      body: {'publicKey': publicKey},
+    ),
+    (m) {
+      final id = m['challengeId'];
+      final msg = m['message'];
+      if (id is! String || msg is! String) {
+        throw ContractException('challenge malformed');
+      }
+      return WalletChallenge(id, msg);
+    },
+  );
+
+  @override
+  Future<String> walletVerify({
+    required String challengeId,
+    required String signatureBase64,
+  }) async => _parse(
+    await _send(
+      'POST',
+      '/v1/wallets/verify',
+      body: {'challengeId': challengeId, 'signature': signatureBase64},
+    ),
+    (m) {
+      final t = m['token'];
+      if (t is! String || t.isEmpty) {
+        throw ContractException('token missing');
+      }
+      return t;
+    },
+  );
+
+  @override
+  Future<PortfolioView> portfolio() async =>
+      _parse(await _send('GET', '/v1/portfolio'), PortfolioView.fromJson);
 
   @override
   Future<Quote> requestQuote({

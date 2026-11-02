@@ -11,12 +11,15 @@ void main() {
 
   File f() => File('${dir.path}/nested/pending.json');
 
-  test('values survive "restart" (a new store instance on the same file)', () async {
-    await FilePendingStore(f()).write('a', '1');
-    expect(await FilePendingStore(f()).read('a'), '1');
-    await FilePendingStore(f()).delete('a');
-    expect(await FilePendingStore(f()).read('a'), isNull);
-  });
+  test(
+    'values survive "restart" (a new store instance on the same file)',
+    () async {
+      await FilePendingStore(f()).write('a', '1');
+      expect(await FilePendingStore(f()).read('a'), '1');
+      await FilePendingStore(f()).delete('a');
+      expect(await FilePendingStore(f()).read('a'), isNull);
+    },
+  );
 
   test('concurrent writes are serialized and none is lost', () async {
     final s = FilePendingStore(f());
@@ -26,18 +29,23 @@ void main() {
     }
   });
 
-  test('a corrupt file reads as empty instead of crashing, and is then repairable', () async {
-    f().createSync(recursive: true);
-    f().writeAsStringSync('{not json');
-    final s = FilePendingStore(f());
-    expect(await s.read('x'), isNull);
-    await s.write('x', 'ok');
-    expect(await FilePendingStore(f()).read('x'), 'ok');
-  });
+  test(
+    'a corrupt file reads as empty instead of crashing, and is then repairable',
+    () async {
+      f().createSync(recursive: true);
+      f().writeAsStringSync('{not json');
+      final s = FilePendingStore(f());
+      expect(await s.read('x'), isNull);
+      await s.write('x', 'ok');
+      expect(await FilePendingStore(f()).read('x'), 'ok');
+    },
+  );
 
   test('leaves no temp file behind', () async {
     await FilePendingStore(f()).write('a', '1');
-    expect(f().parent.listSync().map((e) => e.path.split('/').last), ['pending.json']);
+    expect(f().parent.listSync().map((e) => e.path.split('/').last), [
+      'pending.json',
+    ]);
   });
 
   test('idempotency key is stable across restarts via keyFor', () async {

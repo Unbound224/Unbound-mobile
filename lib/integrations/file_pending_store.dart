@@ -18,7 +18,10 @@ class FilePendingStore implements PendingStore {
     try {
       final j = jsonDecode(file.readAsStringSync());
       if (j is Map<String, Object?>) {
-        return {for (final e in j.entries) if (e.value is String) e.key: e.value! as String};
+        return {
+          for (final e in j.entries)
+            if (e.value is String) e.key: e.value! as String,
+        };
       }
     } on FormatException {
       // fall through: treat as empty
@@ -43,8 +46,10 @@ class FilePendingStore implements PendingStore {
   Future<String?> read(String key) => _locked(() async => _read()[key]);
 
   @override
-  Future<void> write(String key, String value) => _locked(() async => _write(_read()..[key] = value));
+  Future<void> write(String key, String value) =>
+      _locked(() async => _write(_read()..[key] = value));
 
   @override
-  Future<void> delete(String key) => _locked(() async => _write(_read()..remove(key)));
+  Future<void> delete(String key) =>
+      _locked(() async => _write(_read()..remove(key)));
 }

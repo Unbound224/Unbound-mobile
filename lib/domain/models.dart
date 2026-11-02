@@ -292,3 +292,90 @@ class EligibleAsset {
   final String refundPolicy;
   final String contact;
 }
+
+enum HoldingStatus {
+  redeemable,
+  supportedAsset,
+  unverified,
+  suspended,
+  expired,
+  frozen;
+
+  static HoldingStatus parse(String s) {
+    switch (s) {
+      case 'REDEEMABLE':
+        return redeemable;
+      case 'SUPPORTED_ASSET':
+        return supportedAsset;
+      case 'UNVERIFIED':
+        return unverified;
+      case 'SUSPENDED':
+        return suspended;
+      case 'EXPIRED':
+        return expired;
+      case 'FROZEN':
+        return frozen;
+    }
+    throw ContractException('unknown holding status "$s"');
+  }
+}
+
+class HoldingView {
+  HoldingView({
+    required this.wallet,
+    required this.asset,
+    required this.balance,
+    required this.status,
+    this.unitOfAccount,
+    this.expiresAt,
+    this.contact,
+  });
+
+  factory HoldingView.fromJson(Map<String, Object?> j) {
+    final p = j['program'];
+    final prog = p is Map<String, Object?> ? p : null;
+    return HoldingView(
+      wallet: _need<String>(j, 'wallet'),
+      asset: AssetRef.fromJson(_need<Map<String, Object?>>(j, 'asset')),
+      balance: Amount.parse(_need<String>(j, 'balance')),
+      status: HoldingStatus.parse(_need<String>(j, 'status')),
+      unitOfAccount: prog?['unitOfAccount'] as String?,
+      expiresAt: prog == null
+          ? null
+          : DateTime.parse(_need<String>(prog, 'expiresAt')),
+      contact: prog?['contact'] as String?,
+    );
+  }
+
+  final String wallet;
+  final AssetRef asset;
+  final Amount balance;
+  final HoldingStatus status;
+  final String? unitOfAccount;
+  final DateTime? expiresAt;
+  final String? contact;
+
+  /// Only verified, active, unexpired, authorized credit may be exchanged or redeemed.
+  bool get usable => status == HoldingStatus.redeemable;
+}
+
+class PortfolioView {
+  PortfolioView({required this.holdings, required this.notice});
+
+  factory PortfolioView.fromJson(Map<String, Object?> j) => PortfolioView(
+    holdings: [
+      for (final h in _need<List<Object?>>(j, 'holdings'))
+        HoldingView.fromJson(h! as Map<String, Object?>),
+    ],
+    notice: _need<String>(j, 'notice'),
+  );
+
+  final List<HoldingView> holdings;
+  final String notice;
+}
+
+class WalletChallenge {
+  WalletChallenge(this.challengeId, this.message);
+  final String challengeId;
+  final String message;
+}

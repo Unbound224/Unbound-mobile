@@ -4,7 +4,8 @@ import '../domain/amount.dart';
 import '../domain/approval_guard.dart';
 import '../domain/models.dart';
 
-String _hex(List<int> bytes) => bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+String _hex(List<int> bytes) =>
+    bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
 
 AssetRef _asset(s.Asset a) {
   if (a is s.AssetTypeNative) {
@@ -26,16 +27,22 @@ class StellarXdrInspector implements TransactionInspector {
 
   @override
   TxSummary inspect(String unsignedXdr) {
-    final s.AbstractTransaction t = s.AbstractTransaction.fromEnvelopeXdrString(unsignedXdr);
+    final s.AbstractTransaction t = s.AbstractTransaction.fromEnvelopeXdrString(
+      unsignedXdr,
+    );
     if (t is! s.Transaction) {
       throw const FormatException('fee-bump envelopes are not accepted');
     }
     if (t.operations.length != 1) {
-      throw FormatException('expected exactly one operation, got ${t.operations.length}');
+      throw FormatException(
+        'expected exactly one operation, got ${t.operations.length}',
+      );
     }
     final op = t.operations.single;
     if (op.sourceAccount != null) {
-      throw const FormatException('operation-level source accounts are not accepted');
+      throw const FormatException(
+        'operation-level source accounts are not accepted',
+      );
     }
     final hash = _hex(t.hash(s.Network.TESTNET));
     final source = t.sourceAccount.accountId;

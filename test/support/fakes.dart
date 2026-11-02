@@ -130,8 +130,36 @@ class FakeCoreApi implements CoreApi {
     required String destinationAccount,
   }) async => Quote.fromJson(quoteJson());
 
+  List<AssetRef> targets = const [AssetRef('USDC', 'GUSDC')];
+  PortfolioView portfolioResult = PortfolioView(holdings: [], notice: '');
+  Object? portfolioError;
+  final List<String> loginSignatures = [];
+
   @override
   Future<List<EligibleAsset>> listAssets() async => [];
+  @override
+  Future<List<AssetRef>> listTargets() async => targets;
+  @override
+  Future<WalletChallenge> walletChallenge(String publicKey) async =>
+      WalletChallenge('chl_1', 'unbound-auth:v1:TESTNET:nonce:$publicKey');
+  @override
+  Future<String> walletVerify({
+    required String challengeId,
+    required String signatureBase64,
+  }) async {
+    loginSignatures.add(signatureBase64);
+    return 'session-token';
+  }
+
+  @override
+  Future<PortfolioView> portfolio() async {
+    final e = portfolioError;
+    if (e != null) {
+      throw e;
+    }
+    return portfolioResult;
+  }
+
   final List<String> redemptionKeys = [];
   int returnCalls = 0;
   List<Object> redemptionScript = [redemptionView(RedemptionState.fulfilled)];

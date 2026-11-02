@@ -56,6 +56,7 @@ final intentJson = {
 };
 
 void main() {
+  portfolioTests();
   test(
     'sends bearer token and Idempotency-Key as headers, never in the URL',
     () async {
@@ -209,6 +210,114 @@ void main() {
       addTearDown(() => s.close(force: true));
       await expectLater(
         api.listAssets(),
+        throwsA(
+          isA<ApiException>().having((e) => e.code, 'code', 'BAD_RESPONSE'),
+        ),
+      );
+    },
+  );
+}
+
+void portfolioTests() {
+  test('portfolio, targets and wallet login parse the core contract', () async {
+    var n = 0;
+    final (s, api, seen) = await boot((r, _) {
+      n++;
+      switch (n) {
+        case 1:
+          reply(r, 200, {
+            'targets': [
+              {'code': 'USDC', 'issuer': 'GUSDC'},
+            ],
+          });
+        case 2:
+          reply(r, 200, {
+            'challengeId': 'chl_1',
+            'message': 'unbound-auth:v1:TESTNET:n:GME',
+            'expiresAt': 'x',
+          });
+        case 3:
+          reply(r, 200, {
+            'token': 'tok_abc',
+            'userId': 'usr_1',
+            'publicKey': 'GME',
+          });
+        default:
+          reply(r, 200, {
+            'asOf': 'x',
+            'wallets': ['GME'],
+            'native': <Object?>[],
+            'notice': 'Only REDEEMABLE credit can be exchanged or redeemed.',
+            'holdings': [
+              {
+                'wallet': 'GME',
+                'asset': {'code': 'SHOP', 'issuer': 'GSHOP'},
+                'balance': '20.0000000',
+                'status': 'REDEEMABLE',
+                'program': {
+                  'id': 'p',
+                  'unitOfAccount': '1 SHOP = 1 USD',
+                  'expiresAt': '2027-01-01T00:00:00.000Z',
+                  'jurisdiction': 'T',
+                  'contact': 'c',
+                },
+              },
+              {
+                'wallet': 'GME',
+                'asset': {'code': 'RND', 'issuer': 'GZ'},
+                'balance': '5.0000000',
+                'status': 'UNVERIFIED',
+              },
+            ],
+          });
+      }
+    });
+    addTearDown(() => s.close(force: true));
+    expect((await api.listTargets()).single, const AssetRef('USDC', 'GUSDC'));
+    final ch = await api.walletChallenge('GME');
+    expect(ch.message, contains('GME'));
+    expect(
+      await api.walletVerify(
+        challengeId: ch.challengeId,
+        signatureBase64: 'c2ln',
+      ),
+      'tok_abc',
+    );
+    final p = await api.portfolio();
+    expect(p.holdings.map((h) => h.status), [
+      HoldingStatus.redeemable,
+      HoldingStatus.unverified,
+    ]);
+    expect(p.holdings.first.usable, isTrue);
+    expect(p.holdings.last.usable, isFalse);
+    expect(p.holdings.last.unitOfAccount, isNull);
+    expect(seen.map((e) => e.$2), [
+      '/v1/targets',
+      '/v1/wallets/challenge',
+      '/v1/wallets/verify',
+      '/v1/portfolio',
+    ]);
+  });
+
+  test(
+    'portfolio with an unknown holding status is a contract error',
+    () async {
+      final (s, api, _) = await boot(
+        (r, _) => reply(r, 200, {
+          'notice': 'n',
+          'holdings': [
+            {
+              'wallet': 'G',
+              'asset': {'code': 'A', 'issuer': 'G'},
+              'balance': '1.0000000',
+              'status': 'GOLDEN',
+            },
+          ],
+        }),
+      );
+      addTearDown(() => s.close(force: true));
+      await expectLater(
+        api.portfolio(),
         throwsA(
           isA<ApiException>().having((e) => e.code, 'code', 'BAD_RESPONSE'),
         ),

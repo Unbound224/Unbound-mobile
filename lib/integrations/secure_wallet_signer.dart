@@ -15,12 +15,14 @@ abstract class SecretStore {
 }
 
 class SecureStorageKeyValueStore implements SecretStore {
-  SecureStorageKeyValueStore([FlutterSecureStorage? s]) : _s = s ?? const FlutterSecureStorage();
+  SecureStorageKeyValueStore([FlutterSecureStorage? s])
+    : _s = s ?? const FlutterSecureStorage();
   final FlutterSecureStorage _s;
   @override
   Future<String?> read(String key) => _s.read(key: key);
   @override
-  Future<void> write(String key, String value) => _s.write(key: key, value: value);
+  Future<void> write(String key, String value) =>
+      _s.write(key: key, value: value);
   @override
   Future<void> delete(String key) => _s.delete(key: key);
 }
@@ -47,16 +49,26 @@ class SecureWalletSigner implements WalletSigner {
   final s.KeyPair _kp;
 
   /// Loads the stored wallet or throws [WalletNotCreated].
-  static Future<SecureWalletSigner> load(SecretStore store, UserApproval approval) async {
+  static Future<SecureWalletSigner> load(
+    SecretStore store,
+    UserApproval approval,
+  ) async {
     final seed = await store.read(_seedKey);
     if (seed == null) {
       throw WalletNotCreated();
     }
-    return SecureWalletSigner._(store, approval, s.KeyPair.fromSecretSeed(seed));
+    return SecureWalletSigner._(
+      store,
+      approval,
+      s.KeyPair.fromSecretSeed(seed),
+    );
   }
 
   /// Creates a fresh random wallet. Refuses to overwrite an existing one.
-  static Future<SecureWalletSigner> create(SecretStore store, UserApproval approval) async {
+  static Future<SecureWalletSigner> create(
+    SecretStore store,
+    UserApproval approval,
+  ) async {
     if (await store.read(_seedKey) != null) {
       throw StateError('a wallet already exists on this device');
     }
@@ -65,7 +77,8 @@ class SecureWalletSigner implements WalletSigner {
     return SecureWalletSigner._(store, approval, kp);
   }
 
-  static Future<bool> exists(SecretStore store) async => await store.read(_seedKey) != null;
+  static Future<bool> exists(SecretStore store) async =>
+      await store.read(_seedKey) != null;
 
   /// Signs a challenge string (wallet login with unbound-core). Needs approval like a transaction.
   Future<String> signLoginChallenge(String message) async {
@@ -85,7 +98,9 @@ class SecureWalletSigner implements WalletSigner {
     }
     final t = s.AbstractTransaction.fromEnvelopeXdrString(unsignedXdr);
     if (t is! s.Transaction || t.sourceAccount.accountId != publicKey) {
-      throw ArgumentError('refusing to sign a transaction this wallet does not own');
+      throw ArgumentError(
+        'refusing to sign a transaction this wallet does not own',
+      );
     }
     if (!await _approval.confirm('Approve this transaction')) {
       throw SigningCancelled();
