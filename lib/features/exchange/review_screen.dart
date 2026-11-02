@@ -41,7 +41,9 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
       _message = null;
     });
     try {
-      final r = await ref.read(exchangeFlowProvider).approve(widget.quote);
+      final r = await ref
+          .read(exchangeFlowProvider)
+          .approve(widget.quote, trackAfterSubmit: false);
       if (!mounted) {
         return;
       }

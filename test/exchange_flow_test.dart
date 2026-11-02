@@ -38,6 +38,8 @@ class Rig {
 }
 
 void main() {
+  trackFlagTests();
+  snapshotTests();
   test('happy path: one create, one sign, one submit, then ledger-confirmed result', () async {
     final r = Rig();
     final res = await r.flow.approve(r.quote);
@@ -190,6 +192,42 @@ void main() {
       ];
       final res = await r.flow.resume('q_1');
       expect(res!.kind, ExchangeOutcomeKind.terminal);
+    },
+  );
+}
+
+void trackFlagTests() {
+  test(
+    'trackAfterSubmit:false returns right after submit without polling',
+    () async {
+      final r = Rig();
+      final res = await r.flow.approve(r.quote, trackAfterSubmit: false);
+      expect(res.kind, ExchangeOutcomeKind.inFlight);
+      expect(res.intent!.state, IntentState.submitted);
+      expect(r.api.getCalls, 0);
+      expect(r.api.submitCalls, 1);
+    },
+  );
+}
+
+void snapshotTests() {
+  test(
+    'snapshot reads once; offline keeps the last known intent flagged stale',
+    () async {
+      final r = Rig();
+      r.api.getScript = [intentView(IntentState.reconciling)];
+      final a = await r.flow.snapshot('int_1');
+      expect(
+        [a.kind, a.intent!.state, a.stale],
+        [ExchangeOutcomeKind.inFlight, IntentState.reconciling, false],
+      );
+      r.api.getScript = [ApiException('NETWORK', 'offline')];
+      r.api.getCalls = 0;
+      final b = await r.flow.snapshot('int_1', last: a.intent);
+      expect([b.intent!.state, b.stale], [IntentState.reconciling, true]);
+      r.api.getScript = [ApiException('NOT_FOUND', 'x', status: 404)];
+      r.api.getCalls = 0;
+      await expectLater(r.flow.snapshot('nope'), throwsA(isA<ApiException>()));
     },
   );
 }

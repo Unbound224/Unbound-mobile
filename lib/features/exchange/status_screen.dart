@@ -27,12 +27,19 @@ class _StatusScreenState extends ConsumerState<StatusScreen> {
   Future<void> _refresh() async {
     setState(() => _loading = true);
     try {
-      final r = await ref.read(exchangeFlowProvider).track(widget.intentId);
+      final flow = ref.read(exchangeFlowProvider);
+      final first = await flow.snapshot(widget.intentId, last: _result?.intent);
       if (mounted) {
-        setState(() => _result = r);
+        setState(() => _result = first);
+      }
+      if (first.kind != ExchangeOutcomeKind.terminal && mounted) {
+        final r = await flow.track(widget.intentId, last: first.intent);
+        if (mounted) {
+          setState(() => _result = r);
+        }
       }
     } catch (_) {
-      // keep the last known state; the stale banner below explains
+      // keep the last known state; the stale banner explains
     } finally {
       if (mounted) {
         setState(() => _loading = false);

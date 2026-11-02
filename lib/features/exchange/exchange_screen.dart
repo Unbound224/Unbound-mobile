@@ -123,6 +123,7 @@ class _ExchangeScreenState extends ConsumerState<ExchangeScreen> {
               ),
               data: (list) => DropdownButtonFormField<AssetRef>(
                 key: const Key('target'),
+                isExpanded: true,
                 initialValue: _target,
                 decoration: const InputDecoration(
                   labelText: 'Receive',

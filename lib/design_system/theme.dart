@@ -11,14 +11,26 @@ class Brand {
 }
 
 ThemeData buildTheme() {
-  final scheme = ColorScheme.fromSeed(seedColor: Brand.primary, primary: Brand.primary, onSurface: Brand.ink, surface: Brand.surface);
+  final scheme = ColorScheme.fromSeed(
+    seedColor: Brand.primary,
+    primary: Brand.primary,
+    onSurface: Brand.ink,
+    surface: Brand.surface,
+  );
   return ThemeData(
     colorScheme: scheme,
     useMaterial3: true,
     scaffoldBackgroundColor: Brand.surface,
-    appBarTheme: const AppBarTheme(backgroundColor: Brand.ink, foregroundColor: Colors.white),
+    appBarTheme: const AppBarTheme(
+      backgroundColor: Brand.ink,
+      foregroundColor: Colors.white,
+    ),
     // Large tap targets (>= 48dp) for every button.
-    filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52))),
-    outlinedButtonTheme: OutlinedButtonThemeData(style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(52))),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(52)),
+    ),
   );
 }

@@ -5,7 +5,8 @@ import 'secure_wallet_signer.dart';
 /// Biometric / device-credential confirmation before signing. UNVERIFIED on real devices
 /// (no device or emulator was available); it compiles and is covered only by the port's fake in tests.
 class LocalAuthApproval implements UserApproval {
-  LocalAuthApproval([LocalAuthentication? auth]) : _auth = auth ?? LocalAuthentication();
+  LocalAuthApproval([LocalAuthentication? auth])
+    : _auth = auth ?? LocalAuthentication();
   final LocalAuthentication _auth;
 
   @override

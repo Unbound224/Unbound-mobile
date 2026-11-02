@@ -88,7 +88,13 @@ class ExchangeFlow {
 
   /// Approve a reviewed quote. Re-entrant taps while a run is active return [ExchangeOutcomeKind.inFlight]
   /// from the stored intent instead of starting another.
-  Future<ExchangeResult> approve(Quote quote) async {
+  ///
+  /// With [trackAfterSubmit] false (used by the UI) it returns as soon as the transaction has been
+  /// submitted so the status screen can track the SAME intent; no second submission is ever made.
+  Future<ExchangeResult> approve(
+    Quote quote, {
+    bool trackAfterSubmit = true,
+  }) async {
     if (_busy) {
       return const ExchangeResult(
         ExchangeOutcomeKind.inFlight,
@@ -170,6 +176,14 @@ class ExchangeFlow {
           // Unknown: fall through to tracking with the last known intent.
         }
       }
+      if (!trackAfterSubmit) {
+        return ExchangeResult(
+          intent.state.isTerminal
+              ? ExchangeOutcomeKind.terminal
+              : ExchangeOutcomeKind.inFlight,
+          intent: intent,
+        );
+      }
       return await track(intent.id, last: intent);
     } finally {
       _busy = false;
@@ -183,6 +197,29 @@ class ExchangeFlow {
       return null;
     }
     return track(id);
+  }
+
+  /// One quick read for immediate display. Network trouble yields `intent: null, stale: true`
+  /// (or the [last] known intent), never an invented state.
+  Future<ExchangeResult> snapshot(String intentId, {IntentView? last}) async {
+    try {
+      final v = await api.getIntent(intentId);
+      return ExchangeResult(
+        v.state.isTerminal
+            ? ExchangeOutcomeKind.terminal
+            : ExchangeOutcomeKind.inFlight,
+        intent: v,
+      );
+    } on ApiException catch (e) {
+      if (!e.outcomeUnknown) {
+        rethrow;
+      }
+      return ExchangeResult(
+        ExchangeOutcomeKind.inFlight,
+        intent: last,
+        stale: true,
+      );
+    }
   }
 
   /// Poll with backoff until terminal or [maxPolls]. Network loss keeps the last known state (stale).
