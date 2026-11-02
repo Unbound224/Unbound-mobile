@@ -121,6 +121,15 @@ final targetsProvider = FutureProvider.autoDispose<List<AssetRef>>(
   (ref) => ref.watch(coreApiProvider).listTargets(),
 );
 
+/// Polling cadence for flows; tests override it with an instant delay and a small poll budget.
+class FlowTiming {
+  const FlowTiming({this.delay, this.maxPolls = 30});
+  final Delay? delay;
+  final int maxPolls;
+}
+
+final flowTimingProvider = Provider<FlowTiming>((_) => const FlowTiming());
+
 final exchangeFlowProvider = Provider<ExchangeFlow>((ref) {
   final signer = ref.watch(walletProvider).value;
   if (signer == null) {
@@ -132,6 +141,8 @@ final exchangeFlowProvider = Provider<ExchangeFlow>((ref) {
     guard: ApprovalGuard(ref.watch(transactionInspectorProvider)),
     store: ref.watch(pendingStoreProvider),
     clock: ref.watch(clockProvider),
+    delay: ref.watch(flowTimingProvider).delay ?? _realDelay,
+    maxPolls: ref.watch(flowTimingProvider).maxPolls,
   );
 });
 
@@ -145,5 +156,9 @@ final redemptionFlowProvider = Provider<RedemptionFlow>((ref) {
     signer: signer,
     inspector: ref.watch(transactionInspectorProvider),
     store: ref.watch(pendingStoreProvider),
+    delay: ref.watch(flowTimingProvider).delay ?? _realDelay,
+    maxPolls: ref.watch(flowTimingProvider).maxPolls,
   );
 });
+
+Future<void> _realDelay(Duration d) => Future<void>.delayed(d);

@@ -96,6 +96,9 @@ class Rig {
     coreApiProvider.overrideWithValue(api),
     pendingStoreProvider.overrideWithValue(store),
     clockProvider.overrideWithValue(() => now),
+    flowTimingProvider.overrideWithValue(
+      FlowTiming(delay: (_) async {}, maxPolls: 3),
+    ),
   ];
 
   Future<void> pump(WidgetTester tester, {bool signedIn = true}) async {
