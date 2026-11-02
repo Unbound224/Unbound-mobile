@@ -1,0 +1,105 @@
+name: Release (Android beta APK)
+
+# Builds a Testnet-only Android APK when a version tag is pushed and attaches it to a GitHub Release.
+#
+# Signing: if the four ANDROID_KEYSTORE_* secrets below are set, the APK is signed with your release key.
+# Otherwise it is signed with a throwaway debug key generated on the runner: installable for sideloading,
+# but NOT suitable for a store upload, and each build's key differs (users must uninstall to update).
+#
+#   ANDROID_KEYSTORE_BASE64    base64 of your upload keystore (.jks):  base64 -w0 upload-keystore.jks
+#   ANDROID_KEYSTORE_PASSWORD  keystore password
+#   ANDROID_KEY_ALIAS          key alias inside the keystore
+#   ANDROID_KEY_PASSWORD       key password
+#
+# Optional repository variable (Settings -> Secrets and variables -> Actions -> Variables):
+#   UNBOUND_API_URL            HTTPS base URL of a running unbound-core baked into the build (--dart-define=API_URL).
+#                              Unset -> the app's default (http://10.0.2.2:3001, Android emulator -> host only).
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  android-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+      - run: flutter analyze --fatal-infos
+      - run: flutter test
+
+      - name: Configure release signing (optional)
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ] && [ -n "$ANDROID_KEYSTORE_PASSWORD" ] && [ -n "$ANDROID_KEY_ALIAS" ] && [ -n "$ANDROID_KEY_PASSWORD" ]; then
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/app/upload-keystore.jks
+            {
+              echo "storeFile=upload-keystore.jks"
+              echo "storePassword=$ANDROID_KEYSTORE_PASSWORD"
+              echo "keyAlias=$ANDROID_KEY_ALIAS"
+              echo "keyPassword=$ANDROID_KEY_PASSWORD"
+            } > android/key.properties
+            echo "SIGNING=release-signed" >> "$GITHUB_ENV"
+          else
+            echo "::warning::No ANDROID_KEYSTORE_* secrets: the APK will be debug-signed (sideload only)."
+            echo "SIGNING=debug-signed" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build release APK
+        env:
+          API_URL: ${{ vars.UNBOUND_API_URL }}
+        run: |
+          if [ -n "$API_URL" ]; then
+            flutter build apk --release --dart-define=API_URL="$API_URL"
+          else
+            flutter build apk --release
+          fi
+
+      - name: Name artifact and checksum
+        run: |
+          out="unbound-${GITHUB_REF_NAME}-android-testnet-${SIGNING}.apk"
+          mv build/app/outputs/flutter-apk/app-release.apk "$out"
+          sha256sum "$out" > "$out.sha256"
+          echo "APK=$out" >> "$GITHUB_ENV"
+
+      - name: Remove signing material
+        if: always()
+        run: rm -f android/key.properties android/app/upload-keystore.jks
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          prerelease: true
+          files: |
+            ${{ env.APK }}
+            ${{ env.APK }}.sha256
+          body: |
+            **Testnet-only beta. Not available in any app store.**
+
+            - Android APK (`${{ env.SIGNING }}`), built by CI from `${{ github.ref_name }}`.
+            - Works only with Stellar Testnet and synthetic assets. No real funds.
+            - Verify the download: `sha256sum -c ${{ env.APK }}.sha256`
+            - Debug-signed builds are for sideloading/testing only; uninstall before installing a build signed with a different key.
