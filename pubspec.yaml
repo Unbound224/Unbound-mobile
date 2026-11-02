@@ -1,0 +1,9 @@
+name: unbound_mobile
+description: Unbound consumer domain/logic layer (pure Dart). Flutter UI shell not yet built or verified.
+version: 0.1.0
+publish_to: none
+environment:
+  sdk: ^3.13.0
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.25.0
