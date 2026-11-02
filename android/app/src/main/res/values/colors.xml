@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand ink from brand/tokens.json -->
+    <color name="ic_launcher_background">#10092E</color>
+    <color name="splash_background">#10092E</color>
+</resources>
