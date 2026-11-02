@@ -15,15 +15,31 @@ class AppConfig {
   final Uri apiBase;
 
   /// Override at build time: --dart-define=API_URL=http://host:3001 (10.0.2.2 reaches the host from the Android emulator).
-  factory AppConfig.fromEnvironment() => AppConfig(apiBase: Uri.parse(const String.fromEnvironment('API_URL', defaultValue: 'http://10.0.2.2:3001')));
+  factory AppConfig.fromEnvironment() => AppConfig(
+    apiBase: Uri.parse(
+      const String.fromEnvironment(
+        'API_URL',
+        defaultValue: 'http://10.0.2.2:3001',
+      ),
+    ),
+  );
 }
 
 final configProvider = Provider<AppConfig>((_) => AppConfig.fromEnvironment());
-final secretStoreProvider = Provider<SecretStore>((_) => SecureStorageKeyValueStore());
+final secretStoreProvider = Provider<SecretStore>(
+  (_) => SecureStorageKeyValueStore(),
+);
 final userApprovalProvider = Provider<UserApproval>((_) => LocalAuthApproval());
-final pendingStoreProvider = Provider<PendingStore>((_) => InMemoryPendingStore());
-final clockProvider = Provider<DateTime Function()>((_) => () => DateTime.now().toUtc());
-final transactionInspectorProvider = Provider<TransactionInspector>((_) => const StellarXdrInspector());
+final pendingStoreProvider = Provider<PendingStore>(
+  (_) => InMemoryPendingStore(),
+);
+final clockProvider = Provider<DateTime Function()>(
+  (_) =>
+      () => DateTime.now().toUtc(),
+);
+final transactionInspectorProvider = Provider<TransactionInspector>(
+  (_) => const StellarXdrInspector(),
+);
 
 /// Session bearer token. Memory only: never persisted, so a restart requires signing in again.
 class SessionToken extends Notifier<String?> {
@@ -32,9 +48,16 @@ class SessionToken extends Notifier<String?> {
   void set(String? token) => state = token;
 }
 
-final sessionTokenProvider = NotifierProvider<SessionToken, String?>(SessionToken.new);
+final sessionTokenProvider = NotifierProvider<SessionToken, String?>(
+  SessionToken.new,
+);
 
-final coreApiProvider = Provider<CoreApi>((ref) => HttpCoreApi(baseUri: ref.watch(configProvider).apiBase, tokenProvider: () => ref.read(sessionTokenProvider)));
+final coreApiProvider = Provider<CoreApi>(
+  (ref) => HttpCoreApi(
+    baseUri: ref.watch(configProvider).apiBase,
+    tokenProvider: () => ref.read(sessionTokenProvider),
+  ),
+);
 
 /// The on-device wallet, or null when none exists yet.
 class WalletController extends AsyncNotifier<SecureWalletSigner?> {
@@ -49,7 +72,12 @@ class WalletController extends AsyncNotifier<SecureWalletSigner?> {
 
   Future<void> create() async {
     state = const AsyncLoading();
-    state = await AsyncValue.guard(() => SecureWalletSigner.create(ref.read(secretStoreProvider), ref.read(userApprovalProvider)));
+    state = await AsyncValue.guard(
+      () => SecureWalletSigner.create(
+        ref.read(secretStoreProvider),
+        ref.read(userApprovalProvider),
+      ),
+    );
   }
 
   Future<void> wipe() async {
@@ -70,14 +98,28 @@ class WalletController extends AsyncNotifier<SecureWalletSigner?> {
     final api = ref.read(coreApiProvider);
     final ch = await api.walletChallenge(w.publicKey);
     final sig = await w.signLoginChallenge(ch.message);
-    ref.read(sessionTokenProvider.notifier).set(await api.walletVerify(challengeId: ch.challengeId, signatureBase64: sig));
+    ref
+        .read(sessionTokenProvider.notifier)
+        .set(
+          await api.walletVerify(
+            challengeId: ch.challengeId,
+            signatureBase64: sig,
+          ),
+        );
   }
 }
 
-final walletProvider = AsyncNotifierProvider<WalletController, SecureWalletSigner?>(WalletController.new);
+final walletProvider =
+    AsyncNotifierProvider<WalletController, SecureWalletSigner?>(
+      WalletController.new,
+    );
 
-final portfolioProvider = FutureProvider.autoDispose<PortfolioView>((ref) => ref.watch(coreApiProvider).portfolio());
-final targetsProvider = FutureProvider.autoDispose<List<AssetRef>>((ref) => ref.watch(coreApiProvider).listTargets());
+final portfolioProvider = FutureProvider.autoDispose<PortfolioView>(
+  (ref) => ref.watch(coreApiProvider).portfolio(),
+);
+final targetsProvider = FutureProvider.autoDispose<List<AssetRef>>(
+  (ref) => ref.watch(coreApiProvider).listTargets(),
+);
 
 final exchangeFlowProvider = Provider<ExchangeFlow>((ref) {
   final signer = ref.watch(walletProvider).value;

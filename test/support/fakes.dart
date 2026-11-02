@@ -74,6 +74,7 @@ class FakeCoreApi implements CoreApi {
   ];
   Object? submitResult;
   Object? createError;
+  IntentView? awaitingOverride;
   bool failFirstCreateAfterServerCreated = false;
 
   @override
@@ -83,7 +84,10 @@ class FakeCoreApi implements CoreApi {
   }) async {
     createKeys.add(idempotencyKey);
     final existing = createdByKey[idempotencyKey];
-    final v = existing ?? intentView(IntentState.awaitingSignature);
+    final v =
+        existing ??
+        awaitingOverride ??
+        intentView(IntentState.awaitingSignature);
     createdByKey[idempotencyKey] = v;
     if (createError != null) {
       throw createError!;
@@ -133,6 +137,7 @@ class FakeCoreApi implements CoreApi {
   List<AssetRef> targets = const [AssetRef('USDC', 'GUSDC')];
   PortfolioView portfolioResult = PortfolioView(holdings: [], notice: '');
   Object? portfolioError;
+  Object? verifyError;
   final List<String> loginSignatures = [];
 
   @override
@@ -147,6 +152,10 @@ class FakeCoreApi implements CoreApi {
     required String challengeId,
     required String signatureBase64,
   }) async {
+    final e = verifyError;
+    if (e != null) {
+      throw e;
+    }
     loginSignatures.add(signatureBase64);
     return 'session-token';
   }
