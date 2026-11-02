@@ -75,6 +75,8 @@ class FakeCoreApi implements CoreApi {
   Object? submitResult;
   Object? createError;
   IntentView? awaitingOverride;
+  Quote? quoteOverride;
+  Object? quoteError;
   bool failFirstCreateAfterServerCreated = false;
 
   @override
@@ -132,7 +134,13 @@ class FakeCoreApi implements CoreApi {
     required String sourceAmount,
     required int slippageBps,
     required String destinationAccount,
-  }) async => Quote.fromJson(quoteJson());
+  }) async {
+    final e = quoteError;
+    if (e != null) {
+      throw e;
+    }
+    return quoteOverride ?? Quote.fromJson(quoteJson());
+  }
 
   List<AssetRef> targets = const [AssetRef('USDC', 'GUSDC')];
   PortfolioView portfolioResult = PortfolioView(holdings: [], notice: '');
