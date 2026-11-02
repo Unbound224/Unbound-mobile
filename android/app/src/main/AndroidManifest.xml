@@ -1,4 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Release builds need network access to unbound-core (debug/profile manifests add it separately). -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Biometric / device-credential approval before signing (local_auth). -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
     <application
         android:label="Unbound"
         android:name="${applicationName}"
