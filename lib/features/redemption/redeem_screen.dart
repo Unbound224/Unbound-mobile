@@ -53,7 +53,17 @@ class _RedeemScreenState extends ConsumerState<RedeemScreen> {
       final r = await ref
           .read(redemptionFlowProvider)
           .redeem(asset: widget.holding.asset, amount: a);
-      setState(() => _result = r);
+      setState(() {
+        switch (r.kind) {
+          case RedemptionOutcomeKind.refused:
+            _error = 'For your safety this was not signed: the transaction did not match the redemption. Nothing was sent.';
+          case RedemptionOutcomeKind.cancelled:
+            _error = 'Signing was cancelled. Nothing was sent.';
+          case RedemptionOutcomeKind.terminal:
+          case RedemptionOutcomeKind.inFlight:
+            _result = r;
+        }
+      });
     } on SigningCancelled {
       setState(() => _error = 'Signing was cancelled. Nothing was sent.');
     } on ApiException catch (e) {
