@@ -64,7 +64,7 @@ No secrets in the repo. The app never sees or sends a secret key: the signer por
 The only network is Testnet; any other passphrase is refused by the review and the guard.
 
 ## Sibling versions
-Targets `unbound-core` HTTP v1 (OpenAPI `1.0.0-draft`, branch `claude/drips-wave-maintainer-projects-iwucl5`, untagged).
+Targets `unbound-core` HTTP v1 (OpenAPI `1.0.0-draft`, branch `main`, untagged).
 
 ## Minimal integration contract
 Always test the dependency path stated in ARCHITECTURE.md. Every new public endpoint/ABI/package message must be versioned and covered by consumer fixtures. See `docs/SRD.md` and `docs/TECHNICAL_BUILD.md`.
