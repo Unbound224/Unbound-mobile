@@ -1,6 +1,9 @@
 name: Release (Android beta APK)
 
-# Builds a Testnet-only Android APK when a version tag is pushed and attaches it to a GitHub Release.
+# Builds a Testnet-only Android APK when a version tag (v*) is pushed and publishes a normal (not
+# pre-release) GitHub Release, so it becomes "latest". The APK always has the SAME file name, which makes
+#   https://github.com/Unbound224/Unbound-mobile/releases/latest/download/unbound-android.apk
+# a stable link to the newest build (the Unbound site's "Download for Android" button points there).
 #
 # Signing: if the four ANDROID_KEYSTORE_* secrets below are set, the APK is signed with your release key.
 # Otherwise it is signed with a throwaway debug key generated on the runner: installable for sideloading,
@@ -81,10 +84,10 @@ jobs:
 
       - name: Name artifact and checksum
         run: |
-          out="unbound-${GITHUB_REF_NAME}-android-testnet-${SIGNING}.apk"
-          mv build/app/outputs/flutter-apk/app-release.apk "$out"
-          sha256sum "$out" > "$out.sha256"
-          echo "APK=$out" >> "$GITHUB_ENV"
+          # Fixed asset names: releases/latest/download/unbound-android.apk must always resolve.
+          mv build/app/outputs/flutter-apk/app-release.apk unbound-android.apk
+          sha256sum unbound-android.apk > unbound-android.apk.sha256
+          test -s unbound-android.apk
 
       - name: Remove signing material
         if: always()
@@ -92,14 +95,19 @@ jobs:
 
       - uses: softprops/action-gh-release@v2
         with:
-          prerelease: true
+          # A normal release (not a pre-release) so GitHub marks it "latest".
+          prerelease: false
+          make_latest: true
+          fail_on_unmatched_files: true
           files: |
-            ${{ env.APK }}
-            ${{ env.APK }}.sha256
+            unbound-android.apk
+            unbound-android.apk.sha256
           body: |
             **Testnet-only beta. Not available in any app store.**
 
-            - Android APK (`${{ env.SIGNING }}`), built by CI from `${{ github.ref_name }}`.
+            - Android APK `unbound-android.apk` (${{ env.SIGNING }}), built by CI from `${{ github.ref_name }}`.
+            - Stable link to the newest build: https://github.com/${{ github.repository }}/releases/latest/download/unbound-android.apk
             - Works only with Stellar Testnet and synthetic assets. No real funds.
-            - Verify the download: `sha256sum -c ${{ env.APK }}.sha256`
+            - Verify the download: `sha256sum -c unbound-android.apk.sha256`
+            - Install: allow "Install unknown apps" for your browser or file manager (Settings > Apps > Special app access), then open the APK.
             - Debug-signed builds are for sideloading/testing only; uninstall before installing a build signed with a different key.
