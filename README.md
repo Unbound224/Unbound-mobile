@@ -82,12 +82,19 @@ test suite, including widget journeys with real fixture XDR, run in CI.
 ## Android beta APK (releases)
 
 Pushing a tag `v*` runs [`.github/workflows/release.yml`](./.github/workflows/release.yml): Java 17 + Flutter,
-analyze, tests, `flutter build apk --release`, and a **prerelease** on
-[GitHub Releases](https://github.com/Unbound224/Unbound-mobile/releases) with the APK and its SHA-256.
-**This workflow has not run yet** (it was written without access to an Android SDK), so there may be no release
-until the first tag is pushed.
+analyze, tests, `flutter build apk --release`, and a normal (latest, non-prerelease) release on
+[GitHub Releases](https://github.com/Unbound224/Unbound-mobile/releases) with two assets whose names never change:
+`unbound-android.apk` and `unbound-android.apk.sha256`. So this link always downloads the newest build (the site's
+**Download for Android** button uses it):
 
-Signing: by default the APK is debug-signed and labelled `debug-signed` (sideloading only). To sign with your own key,
+    https://github.com/Unbound224/Unbound-mobile/releases/latest/download/unbound-android.apk
+
+To install: allow "Install unknown apps" for your browser or file manager, open the APK, tap Install. Verify with
+`sha256sum -c unbound-android.apk.sha256`. **This workflow has not run yet** (it was written without access to an
+Android SDK), so the link resolves only after the first `v*` tag is pushed. The launcher name is "Unbound" and the
+icon is generated from `brand/icon.svg` (checked by `test/brand_assets_test.dart`).
+
+Signing: by default the APK is debug-signed (sideloading only; the release notes say which). To sign with your own key,
 add these repository secrets:
 
 | Secret | Value |
@@ -112,9 +119,11 @@ Legend: **Built** = implemented and covered by automated tests in this repo. **N
 | `LocalAuthApproval` (biometric / device credential, fails closed) | Written; unverified on device |
 | `HttpCoreApi` and durable pending store | Built; tested against a loopback stub, not the real core |
 | Screens: wallet gate, inventory, exchange, quote review with countdown, status, redemption, settings | Built; widget-tested incl. expiry, refusal, cancel, unknown outcome |
+| Escrowed redemptions: local decode of the Soroban `open_return` / `expire_refund` (contract, function, wallet, issuer, amount, sha256 redemption key, deadline) before signing; escrow card, deadline, Check status, Take my credit back | Built; tested with real XDR from `Unbound-stellar`'s builders. Never run against a deployed contract |
+| Wallet backup (recovery key behind acknowledgement + device approval) and restore from recovery key | Built; unit and widget tested. Screenshot blocking (FLAG_SECURE) not yet |
 | Brand: app name, adaptive launcher icon, splash on brand ink | Built (generated with `flutter_launcher_icons`) |
-| Release workflow (APK to GitHub Releases) | Written; not run yet |
-| Device / integration tests, TalkBack/VoiceOver audit, wallet backup and recovery, localisation, push | Not yet |
+| Release workflow: `v*` tag -> latest (non-prerelease) GitHub Release with fixed `unbound-android.apk` + `.sha256` | Written and guarded by a test; not run yet (no tag pushed) |
+| Device / integration tests, TalkBack/VoiceOver audit, localisation, push | Not yet |
 | App Store / Google Play listings | Not yet: not in any store |
 
 ## Layout
@@ -128,7 +137,7 @@ test adapters only) · `tool/` (brand icon rendering, README screenshots).
 | Repository | Owns | Stack | CI |
 |---|---|---|---|
 | [Unbound-core](https://github.com/Unbound224/Unbound-core) | Backend API: issuers, policies, intents, redemptions, audit | TypeScript, Node 22, SQLite | [![CI](https://github.com/Unbound224/Unbound-core/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Unbound224/Unbound-core/actions/workflows/ci.yml) |
-| [Unbound-stellar](https://github.com/Unbound224/Unbound-stellar) | Stellar SDK, gateway service and chain worker | TypeScript, @stellar/stellar-sdk | [![CI](https://github.com/Unbound224/Unbound-stellar/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Unbound224/Unbound-stellar/actions/workflows/ci.yml) |
+| [Unbound-stellar](https://github.com/Unbound224/Unbound-stellar) | Stellar SDK, gateway service, chain worker, Soroban redemption escrow | TypeScript, @stellar/stellar-sdk, Rust/Soroban | [![CI](https://github.com/Unbound224/Unbound-stellar/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Unbound224/Unbound-stellar/actions/workflows/ci.yml) |
 | [Unbound-site](https://github.com/Unbound224/Unbound-site) | Landing page, partner docs and merchant console | Next.js 16, React 19, Tailwind 4 | [![CI](https://github.com/Unbound224/Unbound-site/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Unbound224/Unbound-site/actions/workflows/ci.yml) |
 | [Unbound-mobile](https://github.com/Unbound224/Unbound-mobile) (this repo) | Flutter consumer wallet | Flutter, Dart, Riverpod | [![CI](https://github.com/Unbound224/Unbound-mobile/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Unbound224/Unbound-mobile/actions/workflows/ci.yml) |
 
