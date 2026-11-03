@@ -26,3 +26,7 @@ local.properties
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
+# Android release signing (written by CI from secrets; never commit)
+key.properties
+*.jks
+*.keystore
