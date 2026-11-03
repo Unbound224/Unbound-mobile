@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../app/providers.dart';
 import '../../integrations/core_api.dart';
@@ -72,12 +73,18 @@ class _CreateWallet extends ConsumerWidget {
         const SizedBox(height: 12),
         const Text(
           'Create a Testnet wallet on this device. Its secret key stays in the device keystore and is never sent anywhere. '
-          'There is no backup or recovery yet, so only use it for the demo.',
+          'Back it up afterwards from Security and issuers; Unbound cannot recover it for you.',
         ),
         const SizedBox(height: 20),
         FilledButton(
           onPressed: () => ref.read(walletProvider.notifier).create(),
           child: const Text('Create Testnet wallet'),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton(
+          key: const Key('open-restore'),
+          onPressed: () => context.push('/restore'),
+          child: const Text('Restore from recovery key'),
         ),
       ],
     ),
