@@ -196,6 +196,9 @@ enum RedemptionState {
   returnConfirmed,
   fulfilled,
   rejected,
+
+  /// Escrow mode: the merchant never answered and the credit was refunded after the deadline.
+  expired,
   failed,
   cancelled;
 
@@ -211,6 +214,8 @@ enum RedemptionState {
         return fulfilled;
       case 'REJECTED':
         return rejected;
+      case 'EXPIRED':
+        return expired;
       case 'FAILED':
         return failed;
       case 'CANCELLED':
@@ -222,8 +227,81 @@ enum RedemptionState {
   bool get isTerminal =>
       this == fulfilled ||
       this == rejected ||
+      this == expired ||
       this == failed ||
       this == cancelled;
+}
+
+/// Where the returned credit sits on-chain (unbound-stellar ADR 0002).
+enum EscrowState {
+  awaitingOpen,
+  held,
+  released,
+  refunded,
+  expiredRefunded;
+
+  static EscrowState parse(String s) => switch (s) {
+    'AWAITING_OPEN' => awaitingOpen,
+    'HELD' => held,
+    'RELEASED' => released,
+    'REFUNDED' => refunded,
+    'EXPIRED_REFUNDED' => expiredRefunded,
+    _ => throw ContractException('unknown escrow state "$s"'),
+  };
+}
+
+enum EscrowAction {
+  confirm,
+  reject,
+  expire;
+
+  static EscrowAction? parse(Object? s) => switch (s) {
+    null => null,
+    'CONFIRM' => confirm,
+    'REJECT' => reject,
+    'EXPIRE' => expire,
+    _ => throw ContractException('unknown escrow action "$s"'),
+  };
+}
+
+/// The Soroban redemption escrow's view of a return, as core reports it.
+class EscrowView {
+  EscrowView({
+    required this.contractId,
+    required this.deadline,
+    required this.state,
+    required this.refundAvailable,
+    required this.pendingAction,
+    required this.pendingXdr,
+    required this.pendingTxHash,
+    required this.closeTxHash,
+  });
+
+  factory EscrowView.fromJson(Map<String, Object?> j) {
+    final contractId = _need<String>(j, 'contractId');
+    if (!RegExp(r'^C[A-Z2-7]{55}$').hasMatch(contractId)) {
+      throw ContractException('escrow contract id is not a C... strkey');
+    }
+    return EscrowView(
+      contractId: contractId,
+      deadline: DateTime.parse(_need<String>(j, 'deadline')),
+      state: EscrowState.parse(_need<String>(j, 'state')),
+      refundAvailable: _need<bool>(j, 'refundAvailable'),
+      pendingAction: EscrowAction.parse(j['pendingAction']),
+      pendingXdr: j['pendingXdr'] as String?,
+      pendingTxHash: j['pendingTxHash'] as String?,
+      closeTxHash: j['closeTxHash'] as String?,
+    );
+  }
+
+  final String contractId;
+  final DateTime deadline;
+  final EscrowState state;
+  final bool refundAvailable;
+  final EscrowAction? pendingAction;
+  final String? pendingXdr;
+  final String? pendingTxHash;
+  final String? closeTxHash;
 }
 
 class RedemptionView {
@@ -235,17 +313,32 @@ class RedemptionView {
     required this.returnTxHash,
     required this.unsignedXdr,
     required this.refundDue,
+    this.escrow,
   });
 
-  factory RedemptionView.fromJson(Map<String, Object?> j) => RedemptionView(
-    id: _need<String>(j, 'id'),
-    state: RedemptionState.parse(_need<String>(j, 'state')),
-    asset: AssetRef.fromJson(_need<Map<String, Object?>>(j, 'asset')),
-    amount: Amount.parse(_need<String>(j, 'amount')),
-    returnTxHash: j['returnTxHash'] as String?,
-    unsignedXdr: j['unsignedXdr'] as String?,
-    refundDue: _need<bool>(j, 'refundDue'),
-  );
+  factory RedemptionView.fromJson(Map<String, Object?> j) {
+    final mode = j['mode'] ?? 'NATIVE';
+    if (mode != 'NATIVE' && mode != 'ESCROW') {
+      throw ContractException('unknown redemption mode "$mode"');
+    }
+    final e = j['escrow'];
+    final escrow = e == null
+        ? null
+        : EscrowView.fromJson((e as Map).cast<String, Object?>());
+    if ((mode == 'ESCROW') != (escrow != null)) {
+      throw ContractException('escrow mode and escrow details disagree');
+    }
+    return RedemptionView(
+      id: _need<String>(j, 'id'),
+      state: RedemptionState.parse(_need<String>(j, 'state')),
+      asset: AssetRef.fromJson(_need<Map<String, Object?>>(j, 'asset')),
+      amount: Amount.parse(_need<String>(j, 'amount')),
+      returnTxHash: j['returnTxHash'] as String?,
+      unsignedXdr: j['unsignedXdr'] as String?,
+      refundDue: _need<bool>(j, 'refundDue'),
+      escrow: escrow,
+    );
+  }
 
   final String id;
   final RedemptionState state;
@@ -254,6 +347,10 @@ class RedemptionView {
   final String? returnTxHash;
   final String? unsignedXdr;
   final bool refundDue;
+
+  /// Present only in escrow mode; null means the classic (native) return payment.
+  final EscrowView? escrow;
+  bool get isEscrow => escrow != null;
 }
 
 /// An eligible (verified, active) credit program as listed by `GET /v1/assets`.

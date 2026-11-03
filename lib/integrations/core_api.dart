@@ -62,6 +62,15 @@ abstract class CoreApi {
     required String id,
     required String signedXdr,
   });
+
+  /// Escrow mode, after the deadline: asks core to build the holder-signed `expire_refund`.
+  Future<RedemptionView> claimRefund(String id);
+
+  /// Submits the holder-signed escrow transaction (the timeout refund).
+  Future<RedemptionView> submitEscrowAction({
+    required String id,
+    required String signedXdr,
+  });
 }
 
 typedef Json = Map<String, Object?>;
@@ -305,6 +314,25 @@ class HttpCoreApi implements CoreApi {
     await _send(
       'POST',
       '/v1/redemptions/${Uri.encodeComponent(id)}/return',
+      body: {'signedXdr': signedXdr},
+    ),
+    RedemptionView.fromJson,
+  );
+
+  @override
+  Future<RedemptionView> claimRefund(String id) async => _parse(
+    await _send('POST', '/v1/redemptions/${Uri.encodeComponent(id)}/refund'),
+    RedemptionView.fromJson,
+  );
+
+  @override
+  Future<RedemptionView> submitEscrowAction({
+    required String id,
+    required String signedXdr,
+  }) async => _parse(
+    await _send(
+      'POST',
+      '/v1/redemptions/${Uri.encodeComponent(id)}/escrow/submit',
       body: {'signedXdr': signedXdr},
     ),
     RedemptionView.fromJson,

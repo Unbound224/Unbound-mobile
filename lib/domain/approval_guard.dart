@@ -15,6 +15,7 @@ class TxSummary {
     required this.path,
     required this.hash,
     required this.operationCount,
+    this.contractCall,
   });
 
   final String networkPassphrase;
@@ -28,6 +29,18 @@ class TxSummary {
   final List<AssetRef> path;
   final String hash;
   final int operationCount;
+
+  /// Set for a Soroban `invokeHostFunction` (the redemption escrow); null for classic payments.
+  final ContractCall? contractCall;
+}
+
+/// A decoded contract invocation. Args: account/contract strkeys as String, integers as BigInt,
+/// bytes as lowercase hex.
+class ContractCall {
+  const ContractCall(this.contractId, this.function, this.args);
+  final String contractId;
+  final String function;
+  final List<Object?> args;
 }
 
 /// Port: decode XDR locally so the user signs what the quote said, not what the server claims.

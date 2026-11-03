@@ -81,11 +81,67 @@ class _RedeemScreenState extends ConsumerState<RedeemScreen> {
     }
   }
 
+  Future<void> _refresh() async {
+    final cur = _result?.redemption;
+    if (cur == null) return;
+    setState(() => _busy = true);
+    try {
+      final r = await ref.read(coreApiProvider).getRedemption(cur.id);
+      setState(() {
+        _result = RedemptionResult(
+          RedemptionOutcomeKind.inFlight,
+          redemption: r,
+        );
+        _error = null;
+      });
+    } on ApiException {
+      setState(() => _error = 'Cannot reach the Unbound service right now.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _claimRefund() async {
+    final cur = _result?.redemption;
+    if (cur == null) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final r = await ref.read(redemptionFlowProvider).claimRefund(cur);
+      setState(() {
+        switch (r.kind) {
+          case RedemptionOutcomeKind.refused:
+            _error = 'For your safety the refund was not signed: the transaction did not match this escrow. Nothing was sent.';
+          case RedemptionOutcomeKind.cancelled:
+            _error = 'Signing was cancelled. Nothing was sent.';
+          case RedemptionOutcomeKind.terminal:
+          case RedemptionOutcomeKind.inFlight:
+            _result = r;
+        }
+      });
+    } on ApiException catch (e) {
+      setState(() => _error = 'The refund could not start (${e.code}).');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final h = widget.holding;
     final r = _result?.redemption;
-    final text = r == null ? null : redemptionStatus(r);
+    final now = ref.read(clockProvider)();
+    final text = r == null ? null : redemptionStatus(r, now: now);
+    final escrow = r?.escrow;
+    final canClaim =
+        r != null &&
+        escrow != null &&
+        r.state == RedemptionState.returnConfirmed &&
+        escrow.state == EscrowState.held &&
+        escrow.pendingAction == null &&
+        (escrow.refundAvailable || !now.isBefore(escrow.deadline));
     return Scaffold(
       appBar: AppBar(title: Text('Redeem ${h.asset.code}')),
       body: SafeArea(
@@ -142,7 +198,37 @@ class _RedeemScreenState extends ConsumerState<RedeemScreen> {
               ),
               const SizedBox(height: 8),
               Text(text.detail, key: const Key('redeem-detail')),
-              if (r!.refundDue)
+              if (escrow != null) _EscrowCard(escrow: escrow),
+              if (canClaim)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: FilledButton(
+                    key: const Key('claim-refund'),
+                    onPressed: _busy ? null : _claimRefund,
+                    child: Text(_busy ? 'Working...' : 'Take my credit back'),
+                  ),
+                ),
+              if (r!.state != RedemptionState.fulfilled && !r.state.isTerminal)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: OutlinedButton(
+                    key: const Key('redeem-refresh'),
+                    onPressed: _busy ? null : _refresh,
+                    child: const Text('Check status'),
+                  ),
+                ),
+              if (_error != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Text(
+                    _error!,
+                    key: const Key('redeem-error'),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ),
+              if (r.refundDue)
                 const Padding(
                   padding: EdgeInsets.only(top: 8),
                   child: Text(
@@ -159,6 +245,53 @@ class _RedeemScreenState extends ConsumerState<RedeemScreen> {
                   ),
                 ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Plain-language escrow facts: where the credit is, the deadline, and the contract (for receipts).
+class _EscrowCard extends StatelessWidget {
+  const _EscrowCard({required this.escrow});
+  final EscrowView escrow;
+
+  static const _where = {
+    EscrowState.awaitingOpen: 'Not in escrow yet',
+    EscrowState.held: 'Locked in the redemption escrow',
+    EscrowState.released: 'Released to the issuer',
+    EscrowState.refunded: 'Refunded to your wallet',
+    EscrowState.expiredRefunded: 'Refunded to your wallet after the deadline',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final d = escrow.deadline.toUtc();
+    String two(int n) => n.toString().padLeft(2, '0');
+    final deadline =
+        '${d.year}-${two(d.month)}-${two(d.day)} ${two(d.hour)}:${two(d.minute)} UTC';
+    final mono = Theme.of(context).textTheme.bodySmall
+        ?.copyWith(fontFamily: 'monospace');
+    return Card(
+      key: const Key('escrow-card'),
+      margin: const EdgeInsets.only(top: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Escrow: ${_where[escrow.state]}',
+              key: const Key('escrow-state'),
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            Text('Merchant must answer by $deadline.'),
+            const SizedBox(height: 4),
+            Text('Contract ${escrow.contractId}', style: mono),
+            if (escrow.closeTxHash != null)
+              Text('Ledger tx ${escrow.closeTxHash}', style: mono),
           ],
         ),
       ),
