@@ -9,7 +9,7 @@ dependencies:
     sdk: flutter
   flutter_riverpod: ^3.0.0
   flutter_secure_storage: ^11.2.0
-  go_router: ^17.0.0
+  go_router: ^18.1.2
   local_auth: ^3.0.2
   path_provider: ^2.1.6
   stellar_flutter_sdk: ^3.10.0
