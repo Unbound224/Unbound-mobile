@@ -43,9 +43,10 @@ void main() {
 
   test('leaves no temp file behind', () async {
     await FilePendingStore(f()).write('a', '1');
-    expect(f().parent.listSync().map((e) => e.path.split('/').last), [
-      'pending.json',
-    ]);
+    expect(
+      f().parent.listSync().map((e) => e.path.split(RegExp(r'[\\/]')).last),
+      ['pending.json'],
+    );
   });
 
   test('idempotency key is stable across restarts via keyFor', () async {
