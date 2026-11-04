@@ -1,21 +1,34 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import '../../flows/ports.dart';
+import '../../integrations/secure_screen.dart';
 
 /// Wallet backup: shows the recovery key once the person has read the warnings and approved on
-/// the device. It is never copied to the clipboard, logged or sent. Blocking screenshots
-/// (Android FLAG_SECURE) is not implemented yet.
+/// the device. It is never copied to the clipboard, logged or sent. While this screen is open,
+/// screenshots, screen recording and the recent-apps thumbnail are blocked on Android
+/// (FLAG_SECURE through [SecureScreen]); iOS has no such switch, so nothing is claimed there.
 class BackupScreen extends ConsumerStatefulWidget {
-  const BackupScreen({super.key});
+  const BackupScreen({super.key, this.secureScreen});
+  final SecureScreen? secureScreen;
   @override
   ConsumerState<BackupScreen> createState() => _BackupScreenState();
 }
 
 class _BackupScreenState extends ConsumerState<BackupScreen> {
+  late final SecureScreen _secure = widget.secureScreen ?? SecureScreen();
   bool _understood = false;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_secure.enable());
+  }
+
   String? _key;
   String? _error;
   bool _busy = false;
@@ -39,6 +52,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
 
   @override
   void dispose() {
+    unawaited(_secure.disable());
     _key = null;
     super.dispose();
   }

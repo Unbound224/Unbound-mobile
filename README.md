@@ -120,9 +120,10 @@ Legend: **Built** = implemented and covered by automated tests in this repo. **N
 | `HttpCoreApi` and durable pending store | Built; tested against a loopback stub, not the real core |
 | Screens: wallet gate, inventory, exchange, quote review with countdown, status, redemption, settings | Built; widget-tested incl. expiry, refusal, cancel, unknown outcome |
 | Escrowed redemptions: local decode of the Soroban `open_return` / `expire_refund` (contract, function, wallet, issuer, amount, sha256 redemption key, deadline) before signing; escrow card, deadline, Check status, Take my credit back | Built; tested with real XDR from `Unbound-stellar`'s builders. Never run against a deployed contract |
-| Wallet backup (recovery key behind acknowledgement + device approval) and restore from recovery key | Built; unit and widget tested. Screenshot blocking (FLAG_SECURE) not yet |
+| Wallet backup (recovery key behind acknowledgement + device approval) and restore from recovery key | Built; unit and widget tested. Android screenshot / recording / recents-thumbnail blocking (FLAG_SECURE) while the recovery key screen is open: channel code and tests built, **not verified on a device**; iOS has no equivalent and is not covered |
 | Brand: app name, adaptive launcher icon, splash on brand ink | Built (generated with `flutter_launcher_icons`) |
 | Release workflow: `v*` tag -> latest (non-prerelease) GitHub Release with fixed `unbound-android.apk` + `.sha256` | Written and guarded by a test; not run yet (no tag pushed) |
+| `flutter build apk --release` on Windows (2026-11-04): succeeds (52.5 MB debug-signed APK) after fixing the plugin `compileSdk` (see CHANGELOG); never installed or run on a phone or emulator | Built; not run on a device |
 | Device / integration tests, TalkBack/VoiceOver audit, localisation, push | Not yet |
 | App Store / Google Play listings | Not yet: not in any store |
 
