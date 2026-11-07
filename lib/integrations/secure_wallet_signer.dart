@@ -38,8 +38,14 @@ class WalletNotCreated implements Exception {
   String toString() => 'WalletNotCreated';
 }
 
-/// On-device Testnet wallet. The secret seed is written only to [SecretStore], never returned,
-/// logged or sent anywhere; only public keys and signed envelopes leave this class.
+class InvalidRecoveryKey implements Exception {
+  @override
+  String toString() => 'InvalidRecoveryKey';
+}
+
+/// On-device Testnet wallet. The secret seed is written only to [SecretStore] and is never logged
+/// or sent anywhere. The single exception is [revealRecoveryKey], which shows it to the person
+/// (after device approval) so they can write it down; nothing else returns it.
 class SecureWalletSigner implements WalletSigner {
   SecureWalletSigner._(this._store, this._approval, this._kp);
 
@@ -75,6 +81,39 @@ class SecureWalletSigner implements WalletSigner {
     final kp = s.KeyPair.random();
     await store.write(_seedKey, kp.secretSeed);
     return SecureWalletSigner._(store, approval, kp);
+  }
+
+  /// Restores a wallet from a written-down recovery key (Stellar secret seed, `S...`).
+  /// Refuses to overwrite an existing wallet and rejects malformed keys before storing anything.
+  static Future<SecureWalletSigner> restore(
+    SecretStore store,
+    UserApproval approval,
+    String recoveryKey,
+  ) async {
+    if (await store.read(_seedKey) != null) {
+      throw StateError('a wallet already exists on this device');
+    }
+    final seed = recoveryKey.replaceAll(RegExp(r'\s'), '').toUpperCase();
+    final s.KeyPair kp;
+    try {
+      if (!s.StrKey.isValidStellarSecretSeed(seed)) throw InvalidRecoveryKey();
+      kp = s.KeyPair.fromSecretSeed(seed);
+    } on Object {
+      throw InvalidRecoveryKey();
+    }
+    await store.write(_seedKey, kp.secretSeed);
+    return SecureWalletSigner._(store, approval, kp);
+  }
+
+  /// Backup: returns the recovery key for display ONLY after the person approves on the device.
+  /// The caller must never log, copy or transmit it.
+  Future<String> revealRecoveryKey() async {
+    if (!await _approval.confirm('Show your recovery key')) {
+      throw SigningCancelled();
+    }
+    final seed = await _store.read(_seedKey);
+    if (seed == null) throw WalletNotCreated();
+    return seed;
   }
 
   static Future<bool> exists(SecretStore store) async =>

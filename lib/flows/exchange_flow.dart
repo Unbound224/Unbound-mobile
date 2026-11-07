@@ -41,7 +41,7 @@ class ExchangeResult {
 typedef Delay = Future<void> Function(Duration d);
 
 /// Orchestrates quote -> approve -> create intent -> sign -> submit -> track.
-/// Rules (docs/SRD.md): same key => same intent; unknown submit outcome => keep tracking, never retry
+/// Rules: same key => same intent; unknown submit outcome => keep tracking, never retry
 /// differently; stale quote => new approval; poor network => retain last known state.
 class ExchangeFlow {
   ExchangeFlow({

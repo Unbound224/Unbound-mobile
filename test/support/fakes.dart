@@ -226,15 +226,60 @@ class FakeCoreApi implements CoreApi {
     }
     return r as RedemptionView;
   }
+
+  Object? claimRefundResult;
+  Object? escrowSubmitResult;
+  final List<String> escrowSubmissions = [];
+
+  @override
+  Future<RedemptionView> claimRefund(String id) async {
+    final r = claimRefundResult;
+    if (r is Exception) throw r;
+    return r! as RedemptionView;
+  }
+
+  @override
+  Future<RedemptionView> submitEscrowAction({
+    required String id,
+    required String signedXdr,
+  }) async {
+    escrowSubmissions.add(signedXdr);
+    final r = escrowSubmitResult;
+    if (r is Exception) throw r;
+    return r! as RedemptionView;
+  }
 }
 
-RedemptionView redemptionView(RedemptionState s, {bool refund = false}) =>
-    RedemptionView(
-      id: 'red_1',
-      state: s,
-      asset: const AssetRef('SHOP', 'GSHOP'),
-      amount: Amount.parse('30'),
-      returnTxHash: hash64,
-      unsignedXdr: s == RedemptionState.awaitingReturn ? 'XDR' : null,
-      refundDue: refund,
-    );
+RedemptionView redemptionView(
+  RedemptionState s, {
+  bool refund = false,
+  EscrowView? escrow,
+}) => RedemptionView(
+  id: 'red_1',
+  state: s,
+  asset: const AssetRef('SHOP', 'GSHOP'),
+  amount: Amount.parse('30'),
+  returnTxHash: hash64,
+  unsignedXdr: s == RedemptionState.awaitingReturn ? 'XDR' : null,
+  refundDue: refund,
+  escrow: escrow,
+);
+
+const escrowContract =
+    'CADQOBYHA4DQOBYHA4DQOBYHA4DQOBYHA4DQOBYHA4DQOBYHA4DQP5KR';
+
+EscrowView escrowView({
+  EscrowState state = EscrowState.held,
+  DateTime? deadline,
+  bool refundAvailable = false,
+  EscrowAction? pending,
+}) => EscrowView(
+  contractId: escrowContract,
+  deadline: deadline ?? DateTime.utc(2030, 1, 1),
+  state: state,
+  refundAvailable: refundAvailable,
+  pendingAction: pending,
+  pendingXdr: pending == null ? null : 'ESCROW-XDR',
+  pendingTxHash: pending == null ? null : hash64,
+  closeTxHash: null,
+);

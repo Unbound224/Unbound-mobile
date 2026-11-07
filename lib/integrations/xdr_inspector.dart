@@ -17,9 +17,31 @@ AssetRef _asset(s.Asset a) {
   throw const FormatException('unsupported asset type');
 }
 
+String _contract(String id) => RegExp(r'^[0-9a-fA-F]{64}$').hasMatch(id)
+    ? s.StrKey.encodeContractIdHex(id)
+    : id;
+
+Object? _arg(s.XdrSCVal v) {
+  switch (v.discriminant) {
+    case s.XdrSCValType.SCV_ADDRESS:
+      final a = s.Address.fromXdrSCVal(v);
+      return a.accountId ??
+          (a.contractId == null ? null : _contract(a.contractId!));
+    case s.XdrSCValType.SCV_I128:
+      return v.toBigInt();
+    case s.XdrSCValType.SCV_U64:
+      return v.u64?.uint64;
+    case s.XdrSCValType.SCV_BYTES:
+      return _hex(v.bytes?.sCBytes ?? const <int>[]);
+    default:
+      return null; // unknown argument kinds are reported as null and fail any comparison
+  }
+}
+
 /// Decodes an unsigned transaction envelope LOCALLY (no network) so [ApprovalGuard] can compare what
 /// the user would sign with the quote. Supports exactly the two shapes Unbound produces: a
-/// single-operation `pathPaymentStrictSend` (exchange) or `payment` (redemption return). Anything
+/// single-operation `pathPaymentStrictSend` (exchange), `payment` (native redemption return) or a
+/// Soroban contract invocation (the redemption escrow, decoded into [ContractCall]). Anything
 /// else - fee bumps, extra operations, per-operation source accounts - is refused by throwing.
 /// The transaction hash is computed for Testnet; a mismatch with the advertised hash is caught by the guard.
 class StellarXdrInspector implements TransactionInspector {
@@ -75,6 +97,28 @@ class StellarXdrInspector implements TransactionInspector {
         path: const [],
         hash: hash,
         operationCount: 1,
+      );
+    }
+    if (op is s.InvokeHostFunctionOperation) {
+      final f = op.function;
+      if (f is! s.InvokeContractHostFunction) {
+        throw const FormatException('only contract invocations are accepted');
+      }
+      return TxSummary(
+        networkPassphrase: testnetPassphrase,
+        sourceAccount: source,
+        operationType: 'invokeContract',
+        sendAsset: const AssetRef('XLM', null),
+        sendAmount: Amount.zero,
+        destAsset: const AssetRef('XLM', null),
+        destMin: Amount.zero,
+        destination: _contract(f.contractID),
+        path: const [],
+        hash: hash,
+        operationCount: 1,
+        contractCall: ContractCall(_contract(f.contractID), f.functionName, [
+          for (final a in f.arguments ?? const <s.XdrSCVal>[]) _arg(a),
+        ]),
       );
     }
     throw FormatException('unsupported operation ${op.runtimeType}');

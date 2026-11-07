@@ -31,11 +31,15 @@ class SettingsScreen extends ConsumerWidget {
               title: const Text('Wallet address'),
               subtitle: SelectableText(wallet?.publicKey ?? 'none'),
             ),
-            const ListTile(
-              title: Text('Secret key'),
-              subtitle: Text(
-                'Stored in this device\'s secure keystore. It is never shown, exported or sent. There is no backup yet.',
+            ListTile(
+              key: const Key('open-backup'),
+              title: const Text('Back up recovery key'),
+              subtitle: const Text(
+                'Stored in this device\'s secure keystore and never sent. Write it down so you can restore this wallet on a new phone.',
               ),
+              trailing: const Icon(Icons.chevron_right),
+              enabled: wallet != null,
+              onTap: () => context.push('/backup'),
             ),
             const Divider(),
             Text(

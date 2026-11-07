@@ -66,12 +66,15 @@ StatusText exchangeStatus(IntentView v) {
   }
 }
 
-StatusText redemptionStatus(RedemptionView v) {
+StatusText redemptionStatus(RedemptionView v, {DateTime? now}) {
+  final e = v.escrow;
   switch (v.state) {
     case RedemptionState.awaitingReturn:
-      return const StatusText(
+      return StatusText(
         'Approve the return',
-        'Send your credit back to the issuer on the ledger so the merchant can honor it.',
+        e != null
+            ? 'Move your credit into the redemption escrow. It stays there until the merchant confirms, rejects, or the deadline passes.'
+            : 'Send your credit back to the issuer on the ledger so the merchant can honor it.',
       );
     case RedemptionState.returnSubmitted:
       return const StatusText(
@@ -80,18 +83,51 @@ StatusText redemptionStatus(RedemptionView v) {
         warnDoNotRetry: true,
       );
     case RedemptionState.returnConfirmed:
+      if (e != null) {
+        if (e.pendingAction == EscrowAction.expire) {
+          return const StatusText(
+            'Refund on its way',
+            'Your refund transaction was sent. Waiting for the ledger.',
+            warnDoNotRetry: true,
+          );
+        }
+        if (e.refundAvailable ||
+            !(now ?? DateTime.now()).isBefore(e.deadline)) {
+          return const StatusText(
+            'Refund available',
+            'The merchant did not answer before the deadline. Your credit is still in escrow and you can take it back now.',
+          );
+        }
+        return StatusText(
+          'Held in escrow',
+          'Your credit is locked in the redemption escrow, not with the merchant. '
+              'If the merchant does not confirm or reject by ${_utc(e.deadline)}, you can take it back.',
+        );
+      }
       return const StatusText(
         'Waiting for the merchant',
         'Your credit was returned. The merchant still has to confirm fulfilment.',
       );
     case RedemptionState.fulfilled:
-      return const StatusText('Redeemed', 'The merchant confirmed fulfilment.');
+      return StatusText(
+        'Redeemed',
+        e != null
+            ? 'The merchant confirmed fulfilment and the escrow released the credit to the issuer.'
+            : 'The merchant confirmed fulfilment.',
+      );
     case RedemptionState.rejected:
       return StatusText(
         'Merchant rejected the redemption',
-        v.refundDue
+        e != null
+            ? 'The escrow refunded your credit to your wallet.'
+            : v.refundDue
             ? 'You are owed a refund under the issuer\'s policy. Contact the issuer.'
             : 'The merchant rejected the request.',
+      );
+    case RedemptionState.expired:
+      return const StatusText(
+        'Refunded',
+        'The merchant did not answer in time. The escrow returned your credit to your wallet.',
       );
     case RedemptionState.failed:
       return const StatusText(
@@ -106,4 +142,10 @@ StatusText redemptionStatus(RedemptionView v) {
         showRetry: true,
       );
   }
+}
+
+String _utc(DateTime d) {
+  final u = d.toUtc();
+  String two(int n) => n.toString().padLeft(2, '0');
+  return '${u.year}-${two(u.month)}-${two(u.day)} ${two(u.hour)}:${two(u.minute)} UTC';
 }

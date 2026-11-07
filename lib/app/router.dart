@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 
 import '../domain/models.dart';
+import '../features/backup/backup_screen.dart';
 import '../features/exchange/exchange_screen.dart';
 import '../features/exchange/review_screen.dart';
 import '../features/exchange/status_screen.dart';
@@ -35,5 +36,7 @@ GoRouter buildRouter() => GoRouter(
           : const GateScreen(),
     ),
     GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
+    GoRoute(path: '/backup', builder: (_, _) => const BackupScreen()),
+    GoRoute(path: '/restore', builder: (_, _) => const RestoreWalletScreen()),
   ],
 );

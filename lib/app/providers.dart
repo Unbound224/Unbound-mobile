@@ -80,6 +80,16 @@ class WalletController extends AsyncNotifier<SecureWalletSigner?> {
     );
   }
 
+  /// Recovery: put a written-down key back on this device. Throws [InvalidRecoveryKey].
+  Future<void> restore(String recoveryKey) async {
+    final w = await SecureWalletSigner.restore(
+      ref.read(secretStoreProvider),
+      ref.read(userApprovalProvider),
+      recoveryKey,
+    );
+    state = AsyncData(w);
+  }
+
   Future<void> wipe() async {
     final w = state.value;
     if (w != null) {
