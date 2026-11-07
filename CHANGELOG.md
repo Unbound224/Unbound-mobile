@@ -1,9 +1,9 @@
 # Changelog
 
-Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions are tagged by the maintainer. Not in any app
-store; Testnet only.
+Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Not in any app store; Testnet only. The Android beta APK is
+attached to each GitHub release.
 
-## [Unreleased]
+## [0.1.0] - 2026-11-06 - Testnet prototype
 
 ### Added
 - Android `FLAG_SECURE` on the recovery-key screen (`SecureScreen`, channel `dev.unbound/secure_screen`).
@@ -18,5 +18,5 @@ store; Testnet only.
 - Release workflow publishes a normal latest release with the fixed asset `unbound-android.apk` (+ `.sha256`), so
   `releases/latest/download/unbound-android.apk` always serves the newest build.
 
-## [0.1.0] - pre-release scaffold
+## Earlier work
 - Wallet gate, inventory, exchange with quote review, status, native redemption, settings, secure signer.
