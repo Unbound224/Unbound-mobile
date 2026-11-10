@@ -93,7 +93,7 @@ jobs:
         if: always()
         run: rm -f android/key.properties android/app/upload-keystore.jks
 
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           # A normal release (not a pre-release) so GitHub marks it "latest".
           prerelease: false
