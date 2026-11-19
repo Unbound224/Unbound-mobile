@@ -45,6 +45,7 @@ Unbound is a Testnet prototype. It has had no security audit and holds no real f
 | Screens: wallet gate, inventory, exchange, quote review with countdown, status, redemption, settings | Built; widget-tested including expiry, refusal, cancel and unknown outcomes |
 | `flutter build apk --release` | Succeeds (about 52 MB, debug-signed unless signing secrets exist); never installed on a phone or emulator |
 | Release workflow (`v*` tag to a GitHub release with `unbound-android.apk` and a checksum) | Written and guarded by a test; see the latest release for its first run |
+| `flutter build ios --release --no-codesign` | Succeeds in CI on macOS (unsigned, about 18 MB); never installed on an iPhone or simulator |
 | Device and integration tests, TalkBack and VoiceOver audit, localisation, push notifications | Not done |
 | App Store and Google Play listings | None: the app is not in any store |
 
@@ -108,6 +109,26 @@ GitHub release with two assets whose names never change, so this link always ser
 Install: allow "Install unknown apps" for your browser or file manager, open the APK, tap Install. Verify with
 `sha256sum -c unbound-android.apk.sha256`. The APK is debug-signed unless these repository secrets exist: `ANDROID_KEYSTORE_BASE64`,
 `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`. It is for sideloading only.
+
+### iOS
+
+iOS support today means **the app compiles for iPhone**, and nothing more:
+
+- **Minimum version:** iOS 15.0 or later, set as `IPHONEOS_DEPLOYMENT_TARGET` in the Xcode project.
+- **CI:** the `ios` job in [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) runs `flutter build ios --release --no-codesign` on a
+  macOS runner for every push and pull request to this repository. Forks skip it unless they set the repository variable `IOS_BUILD=true`,
+  because macOS runner minutes are expensive.
+- **Not signed, not distributed:** there is no certificate, provisioning profile or signing secret in this repository, no `.ipa` is
+  published, and the app is not on the App Store or TestFlight. The build has not been installed on a device or simulator.
+- **Plugins** (`flutter_secure_storage`, `local_auth`, `path_provider`) are pulled in through Swift Package Manager, so no Podfile is needed.
+  `NSFaceIDUsageDescription` is already set in `ios/Runner/Info.plist` for `local_auth`.
+
+To build locally on a Mac with Xcode installed:
+
+```bash
+flutter pub get
+flutter build ios --release --no-codesign   # output: build/ios/iphoneos/Runner.app
+```
 
 ## Project structure
 

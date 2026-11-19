@@ -13,3 +13,18 @@ jobs:
       - run: dart format --output=none --set-exit-if-changed lib test
       - run: flutter analyze --fatal-infos
       - run: flutter test
+  ios:
+    # Unsigned iOS build: proves the app compiles for iPhone, not that it ships.
+    # macOS minutes are expensive, so forks skip this job unless they set the
+    # repository variable IOS_BUILD=true. Pull requests to this repo always run it.
+    if: github.repository == 'Unbound224/Unbound-mobile' || vars.IOS_BUILD == 'true'
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter build ios --release --no-codesign
